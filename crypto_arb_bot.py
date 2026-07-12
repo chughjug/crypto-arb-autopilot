@@ -28,6 +28,7 @@ from collections import deque
 from datetime import datetime, timezone
 
 import crypto_arb
+import bot_persistence
 
 # ------------------------------------------------------------------ tunables
 RELOAD_AMOUNT = 50.0           # dollars injected on each bust / initial load
@@ -869,6 +870,7 @@ class ArbBot:
         self.trade_log: deque = deque(maxlen=LOG_LIMIT)
         self.former_positions: deque = deque(maxlen=100)
         self._started = False
+        self.strategy_id = strategy_id
 
         # Lifetime tracking across busts
         self.life = 1
@@ -895,6 +897,7 @@ class ArbBot:
         }
 
         self._init_ledger()
+        self._load_from_db()
         self._apply_strategy(self.cfg["strategy"])
         self._ensure_loop()          # auto-start
 
@@ -905,6 +908,24 @@ class ArbBot:
         self.settled_count = 0
         self.wins = 0
         self.equity_curve = []
+
+    def _load_from_db(self) -> None:
+        """Load bot state from database."""
+        try:
+            state = bot_persistence.load_bot_state(self.strategy_id)
+            if state:
+                self.life = int(state.get("life", 1))
+                self.cash_cents = int(state.get("cash_cents", int(round(RELOAD_AMOUNT * 100))))
+                self.realized_cents = int(state.get("realized_cents", 0))
+                self.settled_count = int(state.get("settled_count", 0))
+                self.wins = int(state.get("wins", 0))
+                self.total_injected_cents = int(state.get("total_injected_cents", int(round(RELOAD_AMOUNT * 100))))
+                self.lifetime_realized_cents = int(state.get("lifetime_realized_cents", 0))
+
+            self.busts = bot_persistence.load_busts(self.strategy_id)
+            self.equity_curve = bot_persistence.load_equity_curve(self.strategy_id)
+        except Exception as e:
+            self._log("error", msg="Failed to load from DB", error=str(e))
 
     def _bump_skip(self, reasons: dict[str, int], reason: str) -> None:
         reasons[reason] = int(reasons.get(reason) or 0) + 1
@@ -922,6 +943,10 @@ class ArbBot:
         self.equity_curve.append(pt)
         if len(self.equity_curve) > 180:
             self.equity_curve = self.equity_curve[-180:]
+        try:
+            bot_persistence.save_equity_point(self.strategy_id, now, pt["equity"], self.life)
+        except Exception as e:
+            self._log("error", msg="Failed to save equity point to DB", error=str(e))
 
     # ---------------------------------------------------------- bust detection
     def _check_bust(self, now: float) -> None:
@@ -943,6 +968,14 @@ class ArbBot:
                   realized=self.realized_cents / 100.0,
                   settled=self.settled_count, wins=self.wins)
 
+        try:
+            bot_persistence.save_bust(
+                self.strategy_id, self.life, now, bust_equity,
+                self.realized_cents / 100.0, self.settled_count, self.wins
+            )
+        except Exception as e:
+            self._log("error", msg="Failed to save bust to DB", error=str(e))
+
         # Carry over lifetime P&L
         self.lifetime_realized_cents += self.realized_cents
 
@@ -953,6 +986,24 @@ class ArbBot:
         self._log("reload", life=self.life,
                   amount=RELOAD_AMOUNT,
                   total_injected=self.total_injected_cents / 100.0)
+
+        self._save_to_db()
+
+    def _save_to_db(self) -> None:
+        """Persist current bot state to database."""
+        try:
+            bot_persistence.save_bot_state(
+                self.strategy_id,
+                self.life,
+                self.cash_cents,
+                self.realized_cents,
+                self.settled_count,
+                self.wins,
+                self.total_injected_cents,
+                self.lifetime_realized_cents,
+            )
+        except Exception as e:
+            self._log("error", msg="Failed to save bot state to DB", error=str(e))
 
     # ---------------------------------------------------------- config
     def _apply_strategy(self, strategy_id: str) -> None:
@@ -983,6 +1034,7 @@ class ArbBot:
         threading.Thread(target=self._loop, daemon=True, name="crypto-arb-bot").start()
 
     def _loop(self) -> None:
+        last_save = time.time()
         while True:
             try:
                 snap = crypto_arb.snapshot()
@@ -991,6 +1043,9 @@ class ArbBot:
                     self._settle(now)
                     self._check_bust(now)
                     self._enter(snap.get("opportunities") or [], now)
+                    if now - last_save > 30:
+                        self._save_to_db()
+                        last_save = now
             except Exception as e:
                 print("crypto_arb_bot loop error:", e)
             time.sleep(float(self.cfg["poll_interval"]))
@@ -1131,7 +1186,7 @@ class ArbBot:
 
             self.cash_cents -= cost_cents
             deployed_cents += cost_cents
-            self.positions[key] = {
+            pos_data = {
                 "key": key,
                 "coin": r["coin"],
                 "expiry": r["expiry"],
@@ -1151,6 +1206,18 @@ class ArbBot:
                 "venue_details": venue_details,
                 "strategy": strategy,
             }
+            self.positions[key] = pos_data
+
+            try:
+                bot_persistence.save_position(
+                    self.strategy_id, key, r["coin"], r["expiry"],
+                    r["strike"], r["yes_venue"], r["no_venue"],
+                    yes_cost, no_cost, n, cost_cents, locked, payout,
+                    gap, now, exp_ts, pos_data
+                )
+            except Exception as e:
+                self._log("error", msg="Failed to save position to DB", error=str(e))
+
             taken += 1
             self._funnel["taken"] = int(self._funnel.get("taken") or 0) + 1
             self._log("enter", coin=r["coin"], strike=r["strike"], expiry=r["expiry"],
@@ -1258,8 +1325,30 @@ class ArbBot:
             self.settled_count += 1
             if actual_pnl_cents > 0:
                 self.wins += 1
+
+            try:
+                bot_persistence.save_trade(
+                    pos.get("key") or key,
+                    self.strategy_id,
+                    "settled",
+                    coin,
+                    pos["expiry"],
+                    pos["strike"],
+                    contracts,
+                    pos["cost_cents"] / 100.0,
+                    pos.get("locked_cents", 0) / 100.0,
+                    actual_pnl_cents / 100.0,
+                    pos.get("spread"),
+                    pos.get("entry_ts"),
+                    now,
+                    pos
+                )
+                bot_persistence.remove_position(pos.get("key") or key)
+            except Exception as e:
+                self._log("error", msg="Failed to save settled trade to DB", error=str(e))
+
             del self.positions[key]
-            
+
             spot_store = float(crypto_arb.price_decimal(spot_price) or spot_price)
 
             former_pos = {

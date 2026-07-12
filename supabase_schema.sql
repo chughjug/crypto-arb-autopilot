@@ -85,3 +85,82 @@ CREATE TABLE IF NOT EXISTS autopilot_trades (
 );
 CREATE INDEX IF NOT EXISTS idx_autopilot_trades_user_ts ON autopilot_trades(user_id, ts DESC);
 CREATE INDEX IF NOT EXISTS idx_autopilot_trades_status ON autopilot_trades(user_id, status);
+
+CREATE TABLE IF NOT EXISTS bot_state (
+    strategy_id TEXT PRIMARY KEY,
+    life INTEGER NOT NULL DEFAULT 1,
+    cash_cents INTEGER NOT NULL DEFAULT 5000,
+    realized_cents INTEGER NOT NULL DEFAULT 0,
+    settled_count INTEGER NOT NULL DEFAULT 0,
+    wins INTEGER NOT NULL DEFAULT 0,
+    total_injected_cents INTEGER NOT NULL DEFAULT 5000,
+    lifetime_realized_cents INTEGER NOT NULL DEFAULT 0,
+    updated_at DOUBLE PRECISION NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS bot_positions (
+    id TEXT PRIMARY KEY,
+    strategy_id TEXT NOT NULL REFERENCES bot_state(strategy_id) ON DELETE CASCADE,
+    coin TEXT NOT NULL,
+    expiry TEXT NOT NULL,
+    strike DOUBLE PRECISION,
+    yes_venue TEXT,
+    no_venue TEXT,
+    yes_cost DOUBLE PRECISION,
+    no_cost DOUBLE PRECISION,
+    contracts INTEGER,
+    cost_cents INTEGER,
+    locked_cents INTEGER,
+    payout_cents INTEGER,
+    gap DOUBLE PRECISION,
+    entry_ts DOUBLE PRECISION,
+    expiry_ts DOUBLE PRECISION,
+    data JSONB,
+    created_at DOUBLE PRECISION NOT NULL,
+    updated_at DOUBLE PRECISION NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_bot_positions_strategy ON bot_positions(strategy_id);
+
+CREATE TABLE IF NOT EXISTS bot_trades (
+    id TEXT PRIMARY KEY,
+    strategy_id TEXT NOT NULL REFERENCES bot_state(strategy_id) ON DELETE CASCADE,
+    status TEXT NOT NULL,
+    coin TEXT,
+    expiry TEXT,
+    strike DOUBLE PRECISION,
+    contracts INTEGER,
+    cost_total DOUBLE PRECISION,
+    locked_pnl DOUBLE PRECISION,
+    pnl DOUBLE PRECISION,
+    spread DOUBLE PRECISION,
+    entry_ts DOUBLE PRECISION,
+    settled_at DOUBLE PRECISION,
+    data JSONB,
+    created_at DOUBLE PRECISION NOT NULL,
+    updated_at DOUBLE PRECISION NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_bot_trades_strategy ON bot_trades(strategy_id);
+CREATE INDEX IF NOT EXISTS idx_bot_trades_status ON bot_trades(strategy_id, status);
+
+CREATE TABLE IF NOT EXISTS bot_busts (
+    id BIGSERIAL PRIMARY KEY,
+    strategy_id TEXT NOT NULL REFERENCES bot_state(strategy_id) ON DELETE CASCADE,
+    life INTEGER NOT NULL,
+    ts DOUBLE PRECISION NOT NULL,
+    final_cash DOUBLE PRECISION NOT NULL,
+    realized DOUBLE PRECISION NOT NULL,
+    settled INTEGER NOT NULL,
+    wins INTEGER NOT NULL,
+    created_at DOUBLE PRECISION NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_bot_busts_strategy ON bot_busts(strategy_id);
+
+CREATE TABLE IF NOT EXISTS bot_equity_curve (
+    id BIGSERIAL PRIMARY KEY,
+    strategy_id TEXT NOT NULL REFERENCES bot_state(strategy_id) ON DELETE CASCADE,
+    ts DOUBLE PRECISION NOT NULL,
+    equity DOUBLE PRECISION NOT NULL,
+    life INTEGER,
+    created_at DOUBLE PRECISION NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_bot_equity_curve_strategy ON bot_equity_curve(strategy_id, ts DESC);

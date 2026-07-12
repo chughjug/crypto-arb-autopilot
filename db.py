@@ -178,6 +178,7 @@ def _ensure_postgres_migrations(pool) -> None:
             cur.execute("ALTER TABLE auth_challenges ADD COLUMN IF NOT EXISTS payload TEXT")
             cur.execute("ALTER TABLE venue_credentials ADD COLUMN IF NOT EXISTS key_fingerprint TEXT")
             cur.execute("ALTER TABLE autopilot_config ADD COLUMN IF NOT EXISTS overrides TEXT")
+            # Bot persistence tables are created by schema, no migrations needed yet
         conn.commit()
 
 
