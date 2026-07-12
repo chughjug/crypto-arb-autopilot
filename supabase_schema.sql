@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS venue_credentials (
     user_id TEXT NOT NULL,
     venue TEXT NOT NULL,
     enc_payload TEXT NOT NULL,
+    key_fingerprint TEXT,
     connected_at DOUBLE PRECISION NOT NULL,
     updated_at DOUBLE PRECISION NOT NULL,
     PRIMARY KEY (user_id, venue)

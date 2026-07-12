@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 import db
-from vault import open_sensitive_payload, seal_sensitive_payload
+from vault import credential_fingerprint, open_sensitive_payload, redact_secrets, seal_sensitive_payload
 
 _lock = threading.Lock()
 _conn = None
@@ -40,6 +40,7 @@ def _connect():
                     user_id TEXT NOT NULL,
                     venue TEXT NOT NULL,
                     enc_payload TEXT NOT NULL,
+                    key_fingerprint TEXT,
                     connected_at REAL NOT NULL,
                     updated_at REAL NOT NULL,
                     PRIMARY KEY (user_id, venue)
@@ -86,6 +87,9 @@ def _connect():
                 CREATE INDEX IF NOT EXISTS idx_autopilot_log_user ON autopilot_log(user_id, ts DESC);
                 CREATE INDEX IF NOT EXISTS idx_autopilot_trades_user ON autopilot_trades(user_id, ts DESC);
             """)
+            vc_cols = {r["name"] for r in _conn.execute("PRAGMA table_info(venue_credentials)").fetchall()}
+            if "key_fingerprint" not in vc_cols:
+                _conn.execute("ALTER TABLE venue_credentials ADD COLUMN key_fingerprint TEXT")
             _conn.commit()
     return _conn
 
@@ -103,14 +107,16 @@ def save_venue_credentials(user_id: str, venue: str, payload: dict) -> dict:
         raise ValueError(f"Unknown venue: {venue}")
     now = time.time()
     enc = _encrypt(user_id, payload)
+    fingerprint = credential_fingerprint(user_id, payload)
     with _lock:
         _connect().execute(
-            """INSERT INTO venue_credentials(user_id, venue, enc_payload, connected_at, updated_at)
-               VALUES (?, ?, ?, ?, ?)
+            """INSERT INTO venue_credentials(user_id, venue, enc_payload, key_fingerprint, connected_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?)
                ON CONFLICT(user_id, venue) DO UPDATE SET
                  enc_payload=excluded.enc_payload,
+                 key_fingerprint=excluded.key_fingerprint,
                  updated_at=excluded.updated_at""",
-            (user_id, venue, enc, now, now),
+            (user_id, venue, enc, fingerprint or None, now, now),
         )
         _connect().commit()
     return venue_status(user_id, venue)
@@ -236,10 +242,11 @@ def _config_row(row) -> dict:
 
 
 def append_log(user_id: str, level: str, message: str, detail: Any = None) -> None:
+    safe_detail = redact_secrets(detail) if detail is not None else None
     with _lock:
         _connect().execute(
             "INSERT INTO autopilot_log(user_id, ts, level, message, detail) VALUES (?, ?, ?, ?, ?)",
-            (user_id, time.time(), level, message, json.dumps(detail) if detail is not None else None),
+            (user_id, time.time(), level, message, json.dumps(safe_detail) if safe_detail is not None else None),
         )
         _connect().commit()
 

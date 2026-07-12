@@ -38,6 +38,57 @@ def test_vault_user_isolation():
     assert raised
 
 
+def test_credential_fingerprint_is_one_way():
+    uid = "user-abc"
+    payload = {"api_key": "key-12345", "api_secret": "secret-67890"}
+    fp1 = vault.credential_fingerprint(uid, payload)
+    fp2 = vault.credential_fingerprint(uid, {"api_key": "different", "api_secret": "secret-67890"})
+    assert fp1
+    assert fp1 != fp2
+    assert "key-12345" not in fp1
+    assert "secret-67890" not in fp1
+
+
+def test_venue_credentials_stored_encrypted_not_plaintext(tmp_path, monkeypatch):
+    monkeypatch.setenv("AUTOPILOT_DB_PATH", str(tmp_path / "autopilot.db"))
+    import autopilot_store
+
+    autopilot_store._conn = None
+    secrets = {
+        "api_key": "kalshi-live-key-abcdef",
+        "private_key": "-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----",
+        "demo": True,
+    }
+    autopilot_store.save_venue_credentials("user1", "kalshi", secrets)
+    row = autopilot_store._connect().execute(
+        "SELECT enc_payload, key_fingerprint FROM venue_credentials WHERE user_id=? AND venue=?",
+        ("user1", "kalshi"),
+    ).fetchone()
+    blob = row["enc_payload"]
+    assert secrets["api_key"] not in blob
+    assert secrets["private_key"] not in blob
+    assert row["key_fingerprint"]
+    assert secrets["api_key"] not in row["key_fingerprint"]
+    opened = autopilot_store.get_venue_credentials("user1", "kalshi")
+    assert opened["api_key"] == secrets["api_key"]
+
+
+def test_append_log_redacts_secrets(tmp_path, monkeypatch):
+    monkeypatch.setenv("AUTOPILOT_DB_PATH", str(tmp_path / "autopilot.db"))
+    import autopilot_store
+
+    autopilot_store._conn = None
+    autopilot_store.append_log("user1", "info", "test", {
+        "api_key": "super-secret-key",
+        "legs": {"kalshi_yes": {"order_id": "123"}},
+    })
+    row = autopilot_store._connect().execute(
+        "SELECT detail FROM autopilot_log WHERE user_id=?", ("user1",)
+    ).fetchone()
+    assert "super-secret-key" not in row["detail"]
+    assert "[redacted]" in row["detail"]
+
+
 def test_totp_register_and_login_flow(tmp_path, monkeypatch):
     db = tmp_path / "accounts.db"
     monkeypatch.setenv("ACCOUNTS_DB_PATH", str(db))

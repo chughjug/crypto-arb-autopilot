@@ -57,7 +57,7 @@ When `DATABASE_URL` is set, all user data persists across dyno restarts. Without
 ## Security
 
 - **Auth:** username + mandatory TOTP 2FA (no passwords)
-- **Venue API keys:** per-user AES-256-GCM with HKDF-derived keys, sensitive fields sealed individually, master envelope layer
+- **Venue API keys:** AES-256-GCM encryption (per-user HKDF keys, per-field sealing, master envelope); HMAC-SHA256 fingerprints stored for audit; plaintext never written to DB or logs
 - **Sessions:** random tokens stored as HMAC-SHA256 hashes only (never plaintext in DB)
 - **Cookies:** `HttpOnly`, `SameSite=Strict`, `Secure` on Heroku
 

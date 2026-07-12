@@ -176,6 +176,7 @@ def _ensure_postgres_migrations(pool) -> None:
     with pool.connection() as conn:
         with conn.cursor() as cur:
             cur.execute("ALTER TABLE auth_challenges ADD COLUMN IF NOT EXISTS payload TEXT")
+            cur.execute("ALTER TABLE venue_credentials ADD COLUMN IF NOT EXISTS key_fingerprint TEXT")
         conn.commit()
 
 
