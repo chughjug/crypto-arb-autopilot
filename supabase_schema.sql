@@ -23,9 +23,10 @@ CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 
 CREATE TABLE IF NOT EXISTS auth_challenges (
     token_hash TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL,
     kind TEXT NOT NULL,
-    expires_at DOUBLE PRECISION NOT NULL
+    expires_at DOUBLE PRECISION NOT NULL,
+    payload TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_challenges_user ON auth_challenges(user_id);
 

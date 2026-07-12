@@ -45,6 +45,9 @@ def test_totp_register_and_login_flow(tmp_path, monkeypatch):
 
     reg = auth.register("trader1")
     assert reg["requires_2fa_setup"]
+    auth._conn = None
+    conn = auth._connect()
+    assert conn.execute("SELECT COUNT(*) AS n FROM users").fetchone()["n"] == 0
     secret = reg["totp_secret"]
     code = pyotp.TOTP(secret).now()
 

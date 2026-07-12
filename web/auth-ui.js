@@ -161,7 +161,7 @@
     fetch("/api/auth/me", { credentials: "same-origin" })
       .then(r => r.json())
       .then(d => {
-        if (d.user && !d.user.is_guest) location.href = "/autopilot";
+        if (d.user) location.href = "/autopilot";
       })
       .catch(() => {});
 

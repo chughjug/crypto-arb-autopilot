@@ -169,6 +169,14 @@ def _init_postgres_schema(pool) -> None:
                 if stmt:
                     cur.execute(stmt)
         conn.commit()
+    _ensure_postgres_migrations(pool)
+
+
+def _ensure_postgres_migrations(pool) -> None:
+    with pool.connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("ALTER TABLE auth_challenges ADD COLUMN IF NOT EXISTS payload TEXT")
+        conn.commit()
 
 
 def backend_label() -> str:

@@ -79,10 +79,12 @@ class Handler(BaseHTTPRequestHandler):
     def _current_user(self):
         token = self._session_token()
         user = auth.user_from_token(token)
-        extra = []
+        return user, token, []
+
+    def _require_user(self):
+        user, token, extra = self._current_user()
         if not user:
-            token, user = auth.create_guest()
-            extra.append(("Set-Cookie", auth.cookie_header(token)))
+            return None, token, extra
         return user, token, extra
 
     def _read_json(self) -> dict:
@@ -316,7 +318,7 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/autopilot/status":
             user, _, extra = self._current_user()
-            if not user or user.get("is_guest"):
+            if not user:
                 self._send_json(401, {"error": "sign in required"}, extra)
                 return
             import autopilot_engine
@@ -325,7 +327,7 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/autopilot/logs":
             user, _, extra = self._current_user()
-            if not user or user.get("is_guest"):
+            if not user:
                 self._send_json(401, {"error": "sign in required"}, extra)
                 return
             import autopilot_store
@@ -334,7 +336,7 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/autopilot/bankroll":
             user, _, extra = self._current_user()
-            if not user or user.get("is_guest"):
+            if not user:
                 self._send_json(401, {"error": "sign in required"}, extra)
                 return
             import autopilot_bankroll
@@ -343,7 +345,7 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/autopilot/trades":
             user, _, extra = self._current_user()
-            if not user or user.get("is_guest"):
+            if not user:
                 self._send_json(401, {"error": "sign in required"}, extra)
                 return
             import autopilot_store
@@ -394,13 +396,10 @@ class Handler(BaseHTTPRequestHandler):
         path = parsed.path
 
         if path == "/api/auth/register":
-            user, _, extra = self._current_user()
+            _, _, extra = self._current_user()
             body = self._read_json()
             try:
-                result = auth.register(
-                    body.get("username") or "",
-                    guest_id=user["id"] if user and user.get("is_guest") else None,
-                )
+                result = auth.register(body.get("username") or "")
                 self._send_json(200, result, extra)
             except ValueError as e:
                 self._send_json(400, {"error": str(e)}, extra)
@@ -449,7 +448,7 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/autopilot/config":
             user, _, extra = self._current_user()
-            if not user or user.get("is_guest"):
+            if not user:
                 self._send_json(401, {"error": "sign in required"}, extra)
                 return
             import autopilot_store
@@ -459,7 +458,7 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/autopilot/connect/kalshi":
             user, _, extra = self._current_user()
-            if not user or user.get("is_guest"):
+            if not user:
                 self._send_json(401, {"error": "sign in required"}, extra)
                 return
             import autopilot_store
@@ -477,7 +476,7 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/autopilot/connect/polymarket":
             user, _, extra = self._current_user()
-            if not user or user.get("is_guest"):
+            if not user:
                 self._send_json(401, {"error": "sign in required"}, extra)
                 return
             import autopilot_store
@@ -494,7 +493,7 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/autopilot/connect/cryptocom":
             user, _, extra = self._current_user()
-            if not user or user.get("is_guest"):
+            if not user:
                 self._send_json(401, {"error": "sign in required"}, extra)
                 return
             import autopilot_store
@@ -511,7 +510,7 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/autopilot/disconnect":
             user, _, extra = self._current_user()
-            if not user or user.get("is_guest"):
+            if not user:
                 self._send_json(401, {"error": "sign in required"}, extra)
                 return
             import autopilot_store
@@ -526,7 +525,7 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/autopilot/start":
             user, _, extra = self._current_user()
-            if not user or user.get("is_guest"):
+            if not user:
                 self._send_json(401, {"error": "sign in required"}, extra)
                 return
             import autopilot_engine
@@ -535,7 +534,7 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/autopilot/stop":
             user, _, extra = self._current_user()
-            if not user or user.get("is_guest"):
+            if not user:
                 self._send_json(401, {"error": "sign in required"}, extra)
                 return
             import autopilot_engine
