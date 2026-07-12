@@ -74,14 +74,19 @@
       const operator = leg.side === 'yes' ? leg.venue_detail?.yes_operator : leg.venue_detail?.no_operator;
       const timing = leg.venue_detail?.strike_delay_ms == null ? '' : ' · T0+' + Number(leg.venue_detail.strike_delay_ms).toLocaleString() + 'ms';
       const strikeMark = leg.venue_detail?.strike_verified && leg.venue_detail?.settlement_rule_verified
-        ? '<br><span style="color:#059669;font-size:10px">✓ ' + esc(strikeSource) + timing + ' · ' + esc(operator) + '</span>'
-        : '<br><span style="color:#dc2626;font-size:10px">unverified</span>';
-      return '<tr><td><span class="tl-side ' + leg.side + '">' + leg.side.toUpperCase() + '</span></td>' +
-        '<td>' + venueLink(leg.venue, leg.venue_detail || {}, 'tl-venue') + '</td>' +
-        '<td class="r" title="' + esc(leg.venue_detail?.strike_evidence || '') + '">' + strk(leg.strike) + strikeMark + '</td>' +
-        '<td class="r"><span class="v-cost ' + leg.venue + '">' + money(leg.cost_total) + '</span><br><span style="color:var(--muted-2);font-size:10px">' + leg.contracts + '× @ $' + Number(leg.cost_per).toFixed(2) + '</span></td>' +
-        '<td>' + resultHtml + '</td><td class="r">' + pnlHtml + '</td></tr>';
+        ? '<span class="tl-strike-note ok">✓ ' + esc(strikeSource) + timing + ' · ' + esc(operator) + '</span>'
+        : '<span class="tl-strike-note bad">unverified</span>';
+      return '<div class="tl-leg-row">' +
+        '<div class="tl-leg-cell"><span class="tl-side ' + leg.side + '">' + (leg.side || '').toUpperCase() + '</span></div>' +
+        '<div class="tl-leg-cell">' + venueLink(leg.venue, leg.venue_detail || {}, 'tl-venue') + '</div>' +
+        '<div class="tl-leg-cell r" title="' + esc(leg.venue_detail?.strike_evidence || '') + '"><span class="tl-strike">' + strk(leg.strike) + '</span>' + strikeMark + '</div>' +
+        '<div class="tl-leg-cell r"><span class="v-cost ' + leg.venue + '">' + money(leg.cost_total) + '</span><span class="tl-cost-sub">' + leg.contracts + '× @ $' + Number(leg.cost_per).toFixed(2) + '</span></div>' +
+        '<div class="tl-leg-cell">' + resultHtml + '</div>' +
+        '<div class="tl-leg-cell r">' + pnlHtml + '</div></div>';
     }).join('');
+    const legsBlock = legs.length
+      ? '<div class="tl-legs-grid"><div class="tl-leg-row head"><div>Leg</div><div>Venue</div><div class="r">Strike</div><div class="r">Cost</div><div>Result</div><div class="r">P&amp;L</div></div>' + legRows + '</div>'
+      : '<div class="tl-legs-empty">Leg details unavailable for this trade.</div>';
     let foot = '';
     if (open) {
       const yesLeg = legs.find(l => l.side === 'yes'), noLeg = legs.find(l => l.side === 'no');
@@ -105,7 +110,7 @@
       '<div class="tl-card-h"><span class="tl-badge ' + t.status + '">' + t.status + '</span>' +
       '<span class="tl-coin">' + esc(t.coin) + ' &gt; ' + strk(t.strike) + '</span>' + stratBadge + spreadBadge +
       '<span class="tl-meta">' + meta + '</span>' + headPnl + '</div>' +
-      '<table class="tl-table"><thead><tr><th>Leg</th><th>Venue</th><th class="r">Strike</th><th class="r">Cost</th><th>Result</th><th class="r">P&amp;L</th></tr></thead><tbody>' + legRows + '</tbody></table>' + foot + '</article>';
+      legsBlock + foot + '</article>';
   }
 
   function renderEventCard(e) {
