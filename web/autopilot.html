@@ -652,62 +652,155 @@
     </div>
 
     <div id="bkPanelAnalytics" class="bk-panel" role="tabpanel" hidden>
-      <section class="card"><div class="card-pad">
-        <div class="bk-card-title">
-          <h3 id="heatmapTitle">Spread deployment</h3>
-          <span class="sub" id="heatmapCopy">fills by entry spread width</span>
-          <div class="seg" style="margin-left:auto" id="heatMode">
-            <button type="button" class="on" data-mode="spread">Spread</button>
-            <button type="button" data-mode="coin">Coin</button>
-            <button type="button" data-mode="expiry">Expiry</button>
-          </div>
-        </div>
-        <div class="bk-heat-row" id="heatRow"></div>
-        <p class="bk-note" id="heatNote">Spread = $1 − YES − NO. Darker cells hold more contracts.</p>
-      </div></section>
 
+      <!-- Row 1: Heatmap + API Health -->
+      <div class="bk-grid-even">
+        <section class="card"><div class="card-pad">
+          <div class="bk-card-title">
+            <h3 id="heatmapTitle">Spread deployment</h3>
+            <span class="sub" id="heatmapCopy">fills by entry spread width</span>
+            <div class="seg" style="margin-left:auto" id="heatMode">
+              <button type="button" class="on" data-mode="spread">Spread</button>
+              <button type="button" data-mode="coin">Coin</button>
+              <button type="button" data-mode="expiry">Expiry</button>
+            </div>
+          </div>
+          <div class="bk-heat-row" id="heatRow"></div>
+          <p class="bk-note" id="heatNote">Spread = $1 − YES − NO. Darker cells hold more contracts.</p>
+        </div></section>
+
+        <section class="card"><div class="card-pad">
+          <div class="bk-card-title">
+            <h3>API feed &amp; network health</h3>
+            <span class="sub">oracle connection, latencies, and exchange API status</span>
+          </div>
+          <div class="bk-minigrid" id="feedHealthGrid"></div>
+          <div style="margin-top:12px" id="venueStatusBadges"></div>
+        </div></section>
+      </div>
+
+      <!-- Row 2: Runner efficiency -->
       <section class="card" style="margin-top:14px"><div class="card-pad">
         <div class="bk-card-title">
-          <h3>API feed &amp; network health</h3>
-          <span class="sub">real-time checks on oracle connection, latencies, and exchange APIs</span>
+          <h3>Runner efficiency</h3>
+          <span class="sub">cycle throughput, fill rates, and execution timing</span>
+          <span class="bk-card-title right" id="runnerEffSub"></span>
         </div>
-        <div class="bk-minigrid" id="feedHealthGrid"></div>
+        <div class="bk-minigrid" id="runnerEffGrid"></div>
+        <canvas id="runnerSparkline" style="display:block;width:100%;height:56px;margin-top:12px;border-radius:8px;background:var(--surface-2);border:1px solid var(--border)"></canvas>
+        <p class="bk-note">Sparkline shows fill count accumulation over time — each dot is a successful execution.</p>
       </div></section>
 
+      <!-- Row 3: Coin breakdown + Expiry breakdown -->
+      <div class="bk-grid-even" style="margin-top:14px">
+        <section class="card"><div class="card-pad">
+          <div class="bk-card-title"><h3>Coin breakdown</h3><span class="sub">fills &amp; pending PnL per underlying</span></div>
+          <div class="bk-tablewrap" id="coinBreakdownWrap">
+            <table class="bk-table">
+              <thead><tr>
+                <th>Coin</th><th class="r">Trades</th><th class="r">Contracts</th>
+                <th class="r">Open</th><th class="r">Pending PnL</th><th class="r">Realized</th>
+              </tr></thead>
+              <tbody id="coinBreakdownBody"><tr><td colspan="6" class="bk-empty">—</td></tr></tbody>
+            </table>
+          </div>
+        </div></section>
+
+        <section class="card"><div class="card-pad">
+          <div class="bk-card-title"><h3>Expiry breakdown</h3><span class="sub">fills by time-to-expiry at entry</span></div>
+          <div class="bk-tablewrap" id="expiryBreakdownWrap">
+            <table class="bk-table">
+              <thead><tr>
+                <th>Window</th><th class="r">Trades</th><th class="r">Contracts</th>
+                <th class="r">Open</th><th class="r">Settled</th><th class="r">Win %</th>
+              </tr></thead>
+              <tbody id="expiryBreakdownBody"><tr><td colspan="6" class="bk-empty">—</td></tr></tbody>
+            </table>
+          </div>
+        </div></section>
+      </div>
+
+      <!-- Row 4: PnL calibration -->
       <section class="card" style="margin-top:14px"><div class="card-pad">
         <div class="bk-card-title">
-          <h3>Sizing &amp; skip funnel</h3>
-          <span class="sub">why scanned arbs were filtered or bypassed by the runner</span>
+          <h3>PnL calibration accuracy</h3>
+          <span class="sub">predicted edge vs realized settlement — measured on closed trades</span>
+          <span class="bk-card-title right" id="calibSampleNote"></span>
         </div>
-        <div class="bk-vs">
-          <div class="bk-vs-col">
-            <h4>Filtering stats</h4>
-            <div class="bk-minigrid" id="funnelStatsGrid"></div>
-          </div>
-          <div class="bk-vs-col">
-            <h4>Bypassed reasons</h4>
-            <div class="bk-minigrid" id="funnelReasonsGrid"></div>
-          </div>
-        </div>
+        <div class="bk-tablewrap"><div id="calibrationPanel"></div></div>
+        <div class="bk-minigrid" style="margin-top:10px" id="calibSummaryGrid"></div>
       </div></section>
 
+      <!-- Row 5: Skip funnel + Risk profiles -->
+      <div class="bk-grid-even" style="margin-top:14px">
+        <section class="card"><div class="card-pad">
+          <div class="bk-card-title">
+            <h3>Sizing &amp; skip funnel</h3>
+            <span class="sub">why scanned arbs were filtered by the runner</span>
+          </div>
+          <div class="bk-minigrid" id="funnelStatsGrid" style="margin-bottom:10px"></div>
+          <div id="funnelReasonsGrid"></div>
+        </div></section>
+
+        <section class="card"><div class="card-pad">
+          <div class="bk-card-title">
+            <h3>Sizing &amp; risk profiles</h3>
+            <span class="sub">exposure, drawdowns, and variance — live vs paper</span>
+          </div>
+          <div class="bk-vs" style="margin-top:8px">
+            <div class="bk-vs-col">
+              <h4>Live risk</h4>
+              <div class="bk-minigrid" id="liveRiskProfile"></div>
+            </div>
+            <div class="bk-vs-col">
+              <h4>Paper bot</h4>
+              <div class="bk-minigrid" id="paperRiskProfile"></div>
+            </div>
+          </div>
+        </div></section>
+      </div>
+
+      <!-- Row 6: Venue cash-flow ledger -->
       <section class="card" style="margin-top:14px"><div class="card-pad">
         <div class="bk-card-title">
-          <h3>Sizing &amp; risk profiles</h3>
-          <span class="sub">risk characteristics, drawdowns, and variance comparisons</span>
+          <h3>Venue cash-flow ledger</h3>
+          <span class="sub">capital committed, settlement flows, and adaptive allocation weights per exchange</span>
         </div>
-        <div class="bk-vs">
-          <div class="bk-vs-col">
-            <h4>Live risk profile</h4>
-            <div class="bk-minigrid" id="liveRiskProfile"></div>
-          </div>
-          <div class="bk-vs-col">
-            <h4>Paper bot risk profile</h4>
-            <div class="bk-minigrid" id="paperRiskProfile"></div>
-          </div>
+        <div class="bk-tablewrap" style="margin-top:10px">
+          <table class="bk-table">
+            <thead><tr>
+              <th>Venue</th>
+              <th class="r">Recommended %</th>
+              <th class="r">Recommended $</th>
+              <th class="r">Open committed</th>
+              <th class="r">Historical notional</th>
+              <th class="r">Settlement flow</th>
+              <th class="r">Legs</th>
+            </tr></thead>
+            <tbody id="venueCashFlowBody"><tr><td colspan="7" class="bk-empty">—</td></tr></tbody>
+          </table>
+        </div>
+        <p class="bk-note" id="venueCashFlowNote"></p>
+      </div></section>
+
+      <!-- Row 7: Live scanner opportunities -->
+      <section class="card" style="margin-top:14px"><div class="card-pad">
+        <div class="bk-card-title">
+          <h3>Live scanner opportunities</h3>
+          <span class="sub" id="scannerOppSub">current arb pairs detected by the price scanner</span>
+        </div>
+        <div class="bk-tablewrap" id="scannerOppWrap" style="max-height:300px;margin-top:10px">
+          <table class="bk-table">
+            <thead><tr>
+              <th>Coin / Pair</th><th>Venues</th>
+              <th class="r">Edge ¢</th><th class="r">Strike gap</th><th class="r">Detected</th>
+            </tr></thead>
+            <tbody id="scannerOppBody"><tr><td colspan="5" class="bk-empty">No opportunities detected</td></tr></tbody>
+          </table>
         </div>
       </div></section>
 
+      <!-- Row 8: Paper benchmark -->
       <section class="card" style="margin-top:14px"><div class="card-pad">
         <div class="bk-card-title"><h3 id="benchLabel">Paper benchmark</h3><span class="sub">same sizing model on an independent $50 paper bankroll</span></div>
         <div class="bk-vs">
@@ -1666,72 +1759,210 @@ function renderBankroll(d) {
   renderHeatmap();
   renderCalibration(d.calibration);
 
-  // API feed & network health
+  // ── API feed & network health ──────────────────────────────────────
   const scStats = d.scanner?.stats || {};
   const cl = scStats.polymarket_chainlink || {};
   const activeVenues = scStats.venues_live || [];
-  
-  const oracleStatus = cl.connected 
-    ? `<span class="good">Connected</span> (${cl.references || 0} feeds)` 
+  const oracleStatus = cl.connected
+    ? `<span class="good">Connected</span> (${cl.references || 0} feeds)`
     : '<span class="bad">Disconnected</span>';
-  const oracleDelay = cl.max_verified_delay_ms != null 
-    ? `${(cl.max_verified_delay_ms / 1000).toFixed(1)}s max delay` 
-    : '—';
-  
-  const connectedVenuesStr = (d.venues || []).map(v => {
-    const isLive = activeVenues.includes(v.venue);
-    const statusText = v.connected ? (isLive ? '<b class="good">active</b>' : 'linked') : '<span style="color:var(--muted-2)">unlinked</span>';
-    return `${v.label || v.venue}: ${statusText}`;
-  }).join(' · ');
-
+  const oracleDelay = cl.max_verified_delay_ms != null
+    ? `${(cl.max_verified_delay_ms / 1000).toFixed(1)}s max delay` : '—';
   $('feedHealthGrid').innerHTML =
-    bkMini('Oracle status', oracleStatus) +
+    bkMini('Oracle (Chainlink)', oracleStatus) +
     bkMini('Oracle delay', oracleDelay) +
-    bkMini('Scan interval', scStats.poll_seconds != null ? `${scStats.poll_seconds}s polling` : '—') +
-    bkMini('API connections', connectedVenuesStr || '—');
+    bkMini('Scan interval', scStats.poll_seconds != null ? `${scStats.poll_seconds}s` : (scStats.poll_ms != null ? `${scStats.poll_ms}ms` : '—')) +
+    bkMini('Matched pairs', scStats.matched ?? '—') +
+    bkMini('Coins tracked', scStats.coins ?? '—') +
+    bkMini('Best edge seen', scStats.best_edge_cents != null ? `${scStats.best_edge_cents}¢` : '—');
+  $('venueStatusBadges').innerHTML = (d.venues || []).map(v => {
+    const live = activeVenues.includes(v.venue);
+    const cls = v.connected ? (live ? 'ok' : '') : 'bad';
+    const txt = v.connected ? (live ? 'active' : 'linked') : 'unlinked';
+    return `<span class="ap-check-item ${cls}" style="margin:3px"><span class="ic">${v.connected ? (live ? '●' : '○') : '✕'}</span>${esc(v.label || v.venue)}: ${txt}${v.cash_usd != null ? ' · ' + money(v.cash_usd) : ''}</span>`;
+  }).join('');
 
-  // Sizing & skip funnel
+  // ── Runner efficiency ──────────────────────────────────────────────
+  $('runnerEffSub').innerHTML = r.thread_alive
+    ? '<b class="good">thread alive</b>' : '<span class="bad">thread stopped</span>';
+  $('runnerEffGrid').innerHTML =
+    bkMini('Total cycles', r.cycles ?? 0) +
+    bkMini('Exec attempts', r.attempts ?? 0) +
+    bkMini('Successful fills', r.fills ?? 0) +
+    bkMini('Attempt fill %', r.attempt_fill_rate_pct != null ? r.attempt_fill_rate_pct + '%' : '—', r.attempt_fill_rate_pct > 5 ? 'good' : '') +
+    bkMini('Cycles / fill', r.cycles_per_fill ?? '—') +
+    bkMini('Last cycle', r.last_at ? fmtTime(r.last_at) : '—') +
+    bkMini('Last error', r.last_error ? esc(String(r.last_error)).slice(0, 50) : 'None', r.last_error ? 'bad' : 'good');
+  // sparkline: plot fill count over execution timestamps
+  (() => {
+    const canvas = $('runnerSparkline');
+    if (!canvas) return;
+    const executions = d.executions || [];
+    const filled = executions.filter(e => e.ok).sort((a, b) => (a.entry_ts || 0) - (b.entry_ts || 0));
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const W = canvas.clientWidth || 600, H = canvas.clientHeight || 56;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    if (filled.length < 2) {
+      ctx.fillStyle = '#94a3b8'; ctx.font = '11px Inter,sans-serif';
+      ctx.fillText('Not enough fills yet for sparkline', 12, H / 2 + 4);
+      return;
+    }
+    const minTs = filled[0].entry_ts, maxTs = filled[filled.length - 1].entry_ts;
+    const pad = 8;
+    const pts = filled.map((e, i) => ({
+      x: pad + (e.entry_ts - minTs) / (maxTs - minTs || 1) * (W - pad * 2),
+      y: H - pad - (i + 1) / filled.length * (H - pad * 2),
+    }));
+    ctx.beginPath();
+    pts.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y));
+    const lp = pts[pts.length - 1], fp = pts[0];
+    ctx.lineTo(lp.x, H - pad); ctx.lineTo(fp.x, H - pad); ctx.closePath();
+    ctx.fillStyle = 'rgba(99,102,241,.12)'; ctx.fill();
+    ctx.beginPath();
+    pts.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y));
+    ctx.strokeStyle = '#6366f1'; ctx.lineWidth = 2; ctx.stroke();
+    pts.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2); ctx.fillStyle = '#6366f1'; ctx.fill(); });
+  })();
+
+  // ── Coin breakdown table ───────────────────────────────────────────
+  const coinStats = d.coin_stats || {};
+  const coinKeys = Object.keys(coinStats).sort((a, b) => (coinStats[b].trades || 0) - (coinStats[a].trades || 0));
+  $('coinBreakdownBody').innerHTML = coinKeys.length
+    ? coinKeys.map(coin => {
+        const c = coinStats[coin];
+        return `<tr>
+          <td><b>${esc(coin)}</b></td>
+          <td class="r">${c.trades ?? 0}</td>
+          <td class="r">${c.contracts ?? 0}</td>
+          <td class="r">${c.open ?? 0}</td>
+          <td class="r ${pnlCls(c.pending_pnl)}">${c.pending_pnl != null ? pnlFmt(c.pending_pnl) : '—'}</td>
+          <td class="r ${pnlCls(c.pnl)}">${c.pnl != null ? pnlFmt(c.pnl) : '—'}</td>
+        </tr>`;
+      }).join('')
+    : '<tr><td colspan="6" class="bk-empty">No fills yet</td></tr>';
+
+  // ── Expiry breakdown table ─────────────────────────────────────────
+  const expiryStats = d.expiry_stats || {};
+  const EXPIRY_LABELS = {lt_1m:'< 1 min', m1_5:'1–5 min', m5_15:'5–15 min', gt_15m:'15 min+'};
+  $('expiryBreakdownBody').innerHTML = EXPIRY_BUCKETS.map(b => {
+    const c = expiryStats[b.id] || {};
+    if (!c.trades) return `<tr><td>${esc(EXPIRY_LABELS[b.id] || b.label)}</td><td class="r" colspan="5" style="color:var(--muted-2)">—</td></tr>`;
+    return `<tr>
+      <td><b>${esc(EXPIRY_LABELS[b.id] || b.label)}</b></td>
+      <td class="r">${c.trades ?? 0}</td>
+      <td class="r">${c.contracts ?? 0}</td>
+      <td class="r">${c.open ?? 0}</td>
+      <td class="r">${c.settled ?? 0}</td>
+      <td class="r">${c.win_rate != null ? c.win_rate + '%' : '—'}</td>
+    </tr>`;
+  }).join('');
+
+  // ── PnL calibration (summary grid) ────────────────────────────────
+  const cal = d.calibration || {};
+  $('calibSampleNote').textContent = cal.sample_size != null ? `n = ${cal.sample_size} settled trades` : '';
+  if (cal.sample_size > 0) {
+    const totalPred = cal.buckets?.reduce((s, b) => s + (b.predicted_pnl || 0), 0) || 0;
+    const totalReal = cal.buckets?.reduce((s, b) => s + (b.realized_pnl || 0), 0) || 0;
+    const overallWins = cal.buckets?.reduce((s, b) => s + (b.wins || 0), 0) || 0;
+    const overallErr = totalReal - totalPred;
+    $('calibSummaryGrid').innerHTML =
+      bkMini('Total predicted', pnlFmt(totalPred)) +
+      bkMini('Total realized', pnlFmt(totalReal), pnlCls(totalReal)) +
+      bkMini('Cumulative error', pnlFmt(overallErr), pnlCls(overallErr)) +
+      bkMini('Overall wins', overallWins) +
+      bkMini('Calibration', cal.sparse ? 'Sparse (&lt;5)' : 'Sufficient', cal.sparse ? '' : 'good');
+  } else {
+    $('calibSummaryGrid').innerHTML = bkMini('Sample', 'No settled trades yet', '');
+  }
+
+  // ── Sizing & skip funnel ───────────────────────────────────────────
   const fn = paper.funnel || {};
   $('funnelStatsGrid').innerHTML =
-    bkMini('Scans', fn.scans ?? '—') +
-    bkMini('Scanned arbs', fn.scanned ?? '—') +
+    bkMini('Total scans', fn.scans ?? '—') +
+    bkMini('Candidate arbs', fn.scanned ?? '—') +
     bkMini('Eligible arbs', fn.eligible ?? '—') +
-    bkMini('Arbs executed', fn.taken ?? '—') +
+    bkMini('Executed', fn.taken ?? '—') +
+    bkMini('Skipped', fn.skipped ?? '—') +
     bkMini('Take rate', fn.take_rate_pct != null ? `${Number(fn.take_rate_pct).toFixed(1)}%` : '—');
-
-  const skipReasons = Object.entries(fn.skip_reasons || {});
+  const skipReasons = Object.entries(fn.skip_reasons || {}).sort((a, b) => b[1] - a[1]);
+  const SKIP_LABELS = {
+    size_zero: 'Empty order book',
+    strike_gap: 'Strike gap exceeded',
+    edge_too_low: 'Edge below minimum',
+    exposure_limit: 'Exposure limit hit',
+    max_positions: 'Position cap reached',
+  };
   $('funnelReasonsGrid').innerHTML = skipReasons.length
-    ? skipReasons.map(([reason, count]) => {
-        let label = reason;
-        if (reason === 'size_zero') label = 'Zero size / empty book';
-        else if (reason === 'strike_gap') label = 'Exceeds strike gap limit';
-        else if (reason === 'edge_too_low') label = 'Edge below minimum';
-        else if (reason === 'exposure_limit') label = 'Exposure limit reached';
-        return bkMini(label, `${count} times`);
-      }).join('')
-    : '<div class="bk-empty" style="grid-column: 1/-1">No arbs skipped yet in this run.</div>';
+    ? `<table class="bk-table" style="margin-top:4px">
+        <thead><tr><th>Skip reason</th><th class="r">Count</th></tr></thead>
+        <tbody>${skipReasons.map(([k, v]) =>
+          `<tr><td>${esc(SKIP_LABELS[k] || k)}</td><td class="r">${v}</td></tr>`
+        ).join('')}</tbody>
+      </table>`
+    : '<div class="bk-empty" style="margin-top:6px">No skips recorded in this session.</div>';
 
-  // Sizing & risk profiles
+  // ── Risk profiles ─────────────────────────────────────────────────
   const pmRisk = paper.risk_metrics || {};
   const liveRisk = d.execution_risk || {};
-  const liveWinRate = d.trade_stats?.filled && d.trade_stats?.settled 
-    ? (d.trade_stats.filled / d.trade_stats.settled * 100).toFixed(1) + '%' 
-    : '—';
-
+  const liveWinRate = risk.filled_count && risk.execution_count
+    ? (risk.filled_count / risk.execution_count * 100).toFixed(1) + '%' : '—';
   $('liveRiskProfile').innerHTML =
+    bkMini('Fill rate', risk.fill_rate_pct != null ? risk.fill_rate_pct + '%' : '—', risk.fill_rate_pct > 50 ? 'good' : '') +
     bkMini('Open exposure', liveRisk.open_exposure_pct != null ? `${liveRisk.open_exposure_pct}%` : '—') +
     bkMini('Concentration', liveRisk.open_concentration_pct != null ? `${liveRisk.open_concentration_pct}%` : '—') +
-    bkMini('Avg spread / fill', liveRisk.avg_spread_cents != null ? `${liveRisk.avg_spread_cents.toFixed(2)}¢` : '—') +
-    bkMini('Win rate est.', liveWinRate);
-
+    bkMini('Avg spread / fill', liveRisk.avg_spread_cents != null ? `${Number(liveRisk.avg_spread_cents).toFixed(2)}¢` : '—') +
+    bkMini('Avg cost / fill', liveRisk.avg_cost_per_fill != null ? money(liveRisk.avg_cost_per_fill) : '—') +
+    bkMini('Live vs paper fills', `${risk.live_fill_count ?? 0} live / ${risk.paper_fill_count ?? 0} paper`);
   $('paperRiskProfile').innerHTML =
-    bkMini('Max drawdown', pmRisk.max_drawdown_pct != null ? `${Number(pmRisk.max_drawdown_pct).toFixed(2)}%` : '—') +
+    bkMini('Max drawdown', pmRisk.max_drawdown_pct != null ? `${Number(pmRisk.max_drawdown_pct).toFixed(2)}%` : '—', pmRisk.max_drawdown_pct > 10 ? 'bad' : '') +
     bkMini('Open exposure', pmRisk.open_exposure_pct != null ? `${Number(pmRisk.open_exposure_pct).toFixed(2)}%` : '—') +
     bkMini('Concentration', pmRisk.open_concentration_pct != null ? `${Number(pmRisk.open_concentration_pct).toFixed(2)}%` : '—') +
-    bkMini('Volatility (Std)', pmRisk.return_std_pct != null ? `${Number(pmRisk.return_std_pct).toFixed(2)}%` : '—') +
-    bkMini('Profit factor', pmRisk.profit_factor != null ? Number(pmRisk.profit_factor).toFixed(2) : '—') +
+    bkMini('Return volatility', pmRisk.return_std_pct != null ? `${Number(pmRisk.return_std_pct).toFixed(2)}%` : '—') +
+    bkMini('Profit factor', pmRisk.profit_factor != null ? Number(pmRisk.profit_factor).toFixed(2) : '—', pmRisk.profit_factor > 1 ? 'good' : '') +
     bkMini('Avg strike gap', pmRisk.avg_strike_gap_pct != null ? `${(Number(pmRisk.avg_strike_gap_pct) * 100).toFixed(2)}%` : '—');
 
+  // ── Venue cash-flow ledger ─────────────────────────────────────────
+  const alloc = d.venue_allocation || {};
+  const palette = {cryptocom:'#1199fa', kalshi:'#047857', polymarket:'#8b5cf6'};
+  $('venueCashFlowBody').innerHTML = (alloc.venues || []).map(v => {
+    const flow = Number(v.settlement_cash_flow || 0);
+    return `<tr>
+      <td><b style="color:${palette[v.venue] || '#94a3b8'}">${esc(v.label)}</b></td>
+      <td class="r">${Number(v.recommended_pct || 0).toFixed(1)}%</td>
+      <td class="r">${money(v.recommended_amount)}</td>
+      <td class="r">${money(v.open_committed)}</td>
+      <td class="r">${money(v.historical_notional)}</td>
+      <td class="r ${pnlCls(flow)}">${pnlFmt(flow)}</td>
+      <td class="r">${v.legs ?? 0}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="7" class="bk-empty">No leg history yet</td></tr>';
+  $('venueCashFlowNote').textContent = alloc.method
+    ? `${alloc.method} · Confidence: ${Number(alloc.confidence_pct || 0).toFixed(0)}% on ${alloc.sample_legs || 0} legs.`
+    : '';
+
+  // ── Live scanner opportunities ─────────────────────────────────────
+  const opps = d.scanner?.opportunities || [];
+  $('scannerOppSub').textContent = `${opps.length} current arb pair${opps.length !== 1 ? 's' : ''} detected by the price scanner`;
+  $('scannerOppBody').innerHTML = opps.length
+    ? opps.slice(0, 20).map(opp => {
+        const edgeCents = opp.edge_cents ?? opp.edge ?? null;
+        const venues = [opp.yes_venue, opp.no_venue].filter(Boolean).map(v => esc(v)).join(' ↔ ');
+        const gap = opp.strike_gap != null ? (Number(opp.strike_gap) * 100).toFixed(1) + '%' : '—';
+        const age = opp.detected_at ? Math.round((Date.now() / 1000) - opp.detected_at) + 's ago' : '—';
+        return `<tr>
+          <td><b>${esc(opp.coin || '?')}</b>${opp.expiry ? ` <small style="color:var(--muted)">${esc(opp.expiry)}</small>` : ''}</td>
+          <td style="color:var(--muted)">${venues || '—'}</td>
+          <td class="r ${edgeCents > 5 ? 'good' : ''}">${edgeCents != null ? Number(edgeCents).toFixed(1) + '¢' : '—'}</td>
+          <td class="r">${gap}</td>
+          <td class="r" style="color:var(--muted-2)">${age}</td>
+        </tr>`;
+      }).join('')
+    : '<tr><td colspan="5" class="bk-empty">No opportunities detected — scanner may be idle or no arbs exist above minimum edge.</td></tr>';
+
+  // ── Paper benchmark ────────────────────────────────────────────────
   $('benchLabel').textContent = paper.label ? `${paper.label} — live vs paper` : 'No paper benchmark for this strategy';
   $('liveBench').innerHTML =
     bkMini('Fills', risk.filled_count ?? 0) +
