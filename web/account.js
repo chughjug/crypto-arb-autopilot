@@ -1,6 +1,6 @@
 /** Account page — register, login, mandatory 2FA */
 (function () {
-  const $ = s => document.querySelector(s);
+  const $ = id => document.getElementById(id);
   let mode = "login";
   let pending = null;
 
