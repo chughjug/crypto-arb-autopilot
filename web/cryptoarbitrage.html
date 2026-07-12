@@ -7,7 +7,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Crypto Arbitrage · Future360</title>
-<meta name="description" content="Live cross-venue arbitrage on short-term crypto threshold markets — crypto.com Predict vs Kalshi vs Polymarket, matched by expiry and strike, polled every 2s." />
+<meta name="description" content="Live cross-venue arbitrage on short-term crypto threshold markets — crypto.com Predict vs Kalshi vs Polymarket, matched by expiry and strike, polled every 500ms." />
 <link rel="stylesheet" href="/theme.css" />
 <script src="/viewmode.js"></script>
 <style>
@@ -284,7 +284,7 @@
 <div class="page">
 
   <div class="ca-hero">
-    <h1>⚡ Crypto Arbitrage <span class="ca-live"><span class="ca-dot"></span><span id="pollState">polling every 2s</span></span></h1>
+    <h1>⚡ Crypto Arbitrage <span class="ca-live"><span class="ca-dot"></span><span id="pollState">polling every 500ms</span></span></h1>
     <p>Short-term crypto threshold markets — matched across <b>crypto.com&nbsp;Predict</b>, <b>Kalshi</b>, and <b>Polymarket</b>. <a href="/bots">Paper bots &amp; trade ledgers →</a></p>
   </div>
 
@@ -360,7 +360,7 @@
 <script src="/header.js"></script>
 <script>
 const $ = s => document.querySelector(s);
-const POLL_MS = 2000;
+const POLL_MS = 500;
 const MAJOR_COINS = new Set(['BTC','ETH','SOL','DOGE','XRP']);
 const fmtC = v => v==null ? '<span class="ca-noq">—</span>' : '$'+Number(v).toFixed(2);
 const fmtET = iso => {
@@ -634,8 +634,8 @@ async function poll(){
     pollFails = 0;
     $('#apiError').classList.remove('show');
     render(d);
-    const sec = d.stats?.poll_seconds || 2;
-    $('#pollState').textContent = 'polling every '+sec+'s';
+    const sec = d.stats?.poll_seconds || 0.5;
+    $('#pollState').textContent = 'polling every ' + (sec < 1 ? Math.round(sec * 1000) + 'ms' : sec + 's');
   } catch(e){
     pollFails++;
     $('#pollState').textContent = 'reconnecting…';
