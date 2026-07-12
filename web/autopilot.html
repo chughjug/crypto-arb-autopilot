@@ -265,6 +265,10 @@
 .bk-log .d { color: var(--muted-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bk-empty { padding: 22px; text-align: center; color: var(--muted-2); font-size: 12.5px; font-style: italic; }
 .bk-act-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.bk-tabs { margin: 14px 0 18px; }
+.bk-panel[hidden] { display: none !important; }
+.bk-panel { margin-top: 0; }
+.bk-panel .section-head:first-child { margin-top: 0; }
 </style>
 <script src="/viewmode.js"></script>
 </head>
@@ -440,92 +444,107 @@
       <div class="bk-kpis" id="kpis"></div>
     </div></section>
 
-    <div class="bk-grid-2">
-      <section class="card"><div class="card-pad">
-        <div class="bk-card-title"><h3>Equity path</h3><span class="sub">bankroll + cumulative locked edge on fills</span></div>
-        <canvas id="equityChart" height="220"></canvas>
-      </div></section>
-      <section class="card"><div class="card-pad">
-        <div class="bk-card-title"><h3>Runner health</h3><span class="right" id="runnerState">—</span></div>
-        <div class="bk-minigrid" id="runnerGrid"></div>
-        <div class="bk-card-title" style="margin-top:16px"><h3>Scanner</h3><span class="right" id="scannerStat">—</span></div>
-        <div class="bk-minigrid" id="scannerGrid"></div>
-      </div></section>
+    <div class="seg bk-tabs" id="bkTabs" role="tablist">
+      <button type="button" class="on" data-bk-tab="overview" role="tab" aria-selected="true">Overview</button>
+      <button type="button" data-bk-tab="venues" role="tab" aria-selected="false">Venues</button>
+      <button type="button" data-bk-tab="trades" role="tab" aria-selected="false">Trades</button>
+      <button type="button" data-bk-tab="analytics" role="tab" aria-selected="false">Analytics</button>
+      <button type="button" data-bk-tab="log" role="tab" aria-selected="false">Log</button>
     </div>
 
-    <div class="bk-grid-even">
-      <section class="card"><div class="card-pad">
-        <div class="bk-card-title"><h3>Capital summary</h3><span class="sub">deployable vs venue cash vs pending</span></div>
-        <div class="bk-minigrid" id="capitalGrid"></div>
-      </div></section>
-      <section class="card"><div class="card-pad">
-        <div class="bk-card-title"><h3>Active strategy</h3><span class="right" id="stratName">—</span></div>
-        <div class="bk-minigrid" id="stratGrid"></div>
-        <p class="bk-note" id="stratNote"></p>
-      </div></section>
-    </div>
-
-    <div class="section-head"><h2>Venues</h2><span class="hint">live balances and recommended capital split</span></div>
-    <div class="bk-grid-even">
-      <section class="card"><div class="card-pad">
-        <div class="bk-card-title"><h3>Balances</h3></div>
-        <table class="bk-table" id="venueTable">
-          <thead><tr><th>Venue</th><th>Status</th><th class="r">Cash</th><th>Details</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div></section>
-      <section class="card"><div class="card-pad">
-        <div class="bk-card-title"><h3>Recommended allocation</h3><span class="sub">from execution leg history</span></div>
-        <div id="venueAllocator"><div class="bk-empty">Loading…</div></div>
-      </div></section>
-    </div>
-
-    <div class="section-head"><h2>Executions</h2><span class="hint">every attempt the runner made, newest first</span></div>
-    <div class="bk-grid-2">
-      <section class="card"><div class="card-pad">
-        <div class="bk-act-head">
-          <div class="apl-tabs" id="bkTlTabs"></div>
-          <span class="apl-sum" id="bkTlSum" style="margin-left:auto">—</span>
-        </div>
-        <div class="apl-list" id="bkTlList" style="max-height:640px"><div class="bk-empty">Loading…</div></div>
-      </div></section>
-      <section class="card"><div class="card-pad">
-        <div class="bk-card-title"><h3>Execution risk</h3><span class="sub">fill quality &amp; exposure</span></div>
-        <div class="bk-minigrid" id="execRiskGrid"></div>
-        <div class="bk-card-title" style="margin-top:16px"><h3>Calibration</h3><span class="sub">predicted vs realized</span></div>
-        <div id="calibrationPanel"><div class="bk-empty">—</div></div>
-      </div></section>
-    </div>
-
-    <div class="section-head"><h2>Deployment</h2><span class="hint">where your contracts actually went</span></div>
-    <section class="card"><div class="card-pad">
-      <div class="bk-card-title">
-        <h3 id="heatmapTitle">Spread deployment</h3>
-        <span class="sub" id="heatmapCopy">fills by entry spread width</span>
-        <div class="seg" style="margin-left:auto" id="heatMode">
-          <button type="button" class="on" data-mode="spread">Spread</button>
-          <button type="button" data-mode="coin">Coin</button>
-          <button type="button" data-mode="expiry">Expiry</button>
-        </div>
+    <div id="bkPanelOverview" class="bk-panel" role="tabpanel">
+      <div class="bk-grid-2">
+        <section class="card"><div class="card-pad">
+          <div class="bk-card-title"><h3>Equity path</h3><span class="sub">bankroll + cumulative locked edge on fills</span></div>
+          <canvas id="equityChart" height="220"></canvas>
+        </div></section>
+        <section class="card"><div class="card-pad">
+          <div class="bk-card-title"><h3>Runner health</h3><span class="right" id="runnerState">—</span></div>
+          <div class="bk-minigrid" id="runnerGrid"></div>
+          <div class="bk-card-title" style="margin-top:16px"><h3>Scanner</h3><span class="right" id="scannerStat">—</span></div>
+          <div class="bk-minigrid" id="scannerGrid"></div>
+        </div></section>
       </div>
-      <div class="bk-heat-row" id="heatRow"></div>
-      <p class="bk-note" id="heatNote">Spread = $1 − YES − NO. Darker cells hold more contracts.</p>
-    </div></section>
 
-    <div class="section-head"><h2>Paper benchmark</h2><span class="hint">same sizing model on an independent $50 paper bankroll</span></div>
-    <section class="card"><div class="card-pad">
-      <div class="bk-card-title"><h3 id="benchLabel">—</h3></div>
-      <div class="bk-vs">
-        <div class="bk-vs-col"><h4>Your live execution</h4><div class="bk-minigrid" id="liveBench"></div></div>
-        <div class="bk-vs-col"><h4>Paper benchmark</h4><div class="bk-minigrid" id="paperBench"></div></div>
+      <div class="bk-grid-even">
+        <section class="card"><div class="card-pad">
+          <div class="bk-card-title"><h3>Capital summary</h3><span class="sub">deployable vs venue cash vs pending</span></div>
+          <div class="bk-minigrid" id="capitalGrid"></div>
+        </div></section>
+        <section class="card"><div class="card-pad">
+          <div class="bk-card-title"><h3>Active strategy</h3><span class="right" id="stratName">—</span></div>
+          <div class="bk-minigrid" id="stratGrid"></div>
+          <p class="bk-note" id="stratNote"></p>
+        </div></section>
       </div>
-      <p class="bk-note" id="benchNote"></p>
-    </div></section>
+    </div>
 
-    <div class="section-head"><h2>Activity log</h2><span class="hint">recent autopilot events</span></div>
-    <section class="card"><div class="card-pad">
-      <div class="bk-log" id="activityLog"><div>—</div></div>
-    </div></section>
+    <div id="bkPanelVenues" class="bk-panel" role="tabpanel" hidden>
+      <div class="bk-grid-even">
+        <section class="card"><div class="card-pad">
+          <div class="bk-card-title"><h3>Balances</h3><span class="sub">live cash per connected venue</span></div>
+          <table class="bk-table" id="venueTable">
+            <thead><tr><th>Venue</th><th>Status</th><th class="r">Cash</th><th>Details</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div></section>
+        <section class="card"><div class="card-pad">
+          <div class="bk-card-title"><h3>Recommended allocation</h3><span class="sub">from execution leg history</span></div>
+          <div id="venueAllocator"><div class="bk-empty">Loading…</div></div>
+        </div></section>
+      </div>
+    </div>
+
+    <div id="bkPanelTrades" class="bk-panel" role="tabpanel" hidden>
+      <div class="bk-grid-2">
+        <section class="card"><div class="card-pad">
+          <div class="bk-card-title"><h3>Trade ledger</h3><span class="sub">every fill the runner made</span></div>
+          <div class="bk-act-head">
+            <div class="apl-tabs" id="bkTlTabs"></div>
+            <span class="apl-sum" id="bkTlSum" style="margin-left:auto">—</span>
+          </div>
+          <div class="apl-list" id="bkTlList" style="max-height:640px"><div class="bk-empty">Loading…</div></div>
+        </div></section>
+        <section class="card"><div class="card-pad">
+          <div class="bk-card-title"><h3>Execution risk</h3><span class="sub">fill quality &amp; exposure</span></div>
+          <div class="bk-minigrid" id="execRiskGrid"></div>
+          <div class="bk-card-title" style="margin-top:16px"><h3>Calibration</h3><span class="sub">predicted vs realized</span></div>
+          <div id="calibrationPanel"><div class="bk-empty">—</div></div>
+        </div></section>
+      </div>
+    </div>
+
+    <div id="bkPanelAnalytics" class="bk-panel" role="tabpanel" hidden>
+      <section class="card"><div class="card-pad">
+        <div class="bk-card-title">
+          <h3 id="heatmapTitle">Spread deployment</h3>
+          <span class="sub" id="heatmapCopy">fills by entry spread width</span>
+          <div class="seg" style="margin-left:auto" id="heatMode">
+            <button type="button" class="on" data-mode="spread">Spread</button>
+            <button type="button" data-mode="coin">Coin</button>
+            <button type="button" data-mode="expiry">Expiry</button>
+          </div>
+        </div>
+        <div class="bk-heat-row" id="heatRow"></div>
+        <p class="bk-note" id="heatNote">Spread = $1 − YES − NO. Darker cells hold more contracts.</p>
+      </div></section>
+
+      <section class="card" style="margin-top:14px"><div class="card-pad">
+        <div class="bk-card-title"><h3 id="benchLabel">Paper benchmark</h3><span class="sub">same sizing model on an independent $50 paper bankroll</span></div>
+        <div class="bk-vs">
+          <div class="bk-vs-col"><h4>Your live execution</h4><div class="bk-minigrid" id="liveBench"></div></div>
+          <div class="bk-vs-col"><h4>Paper benchmark</h4><div class="bk-minigrid" id="paperBench"></div></div>
+        </div>
+        <p class="bk-note" id="benchNote"></p>
+      </div></section>
+    </div>
+
+    <div id="bkPanelLog" class="bk-panel" role="tabpanel" hidden>
+      <section class="card"><div class="card-pad">
+        <div class="bk-card-title"><h3>Activity log</h3><span class="sub">recent autopilot events</span></div>
+        <div class="bk-log" id="activityLog"><div>—</div></div>
+      </div></section>
+    </div>
   </div><!-- /tabBankroll -->
 
 </div>
@@ -1036,13 +1055,49 @@ document.querySelectorAll('[data-disconnect]').forEach(btn => {
 
 /* ── dashboard tabs ───────────────────────────────────────────── */
 let activeTab = 'autopilot';
+let activeBkTab = 'overview';
+const BK_TABS = ['overview', 'venues', 'trades', 'analytics', 'log'];
 let bkStarted = false;
 let bkInterval = null;
 
 function tabFromUrl() {
   const q = new URLSearchParams(location.search).get('tab');
-  if (q === 'bankroll' || location.hash === '#bankroll') return 'bankroll';
+  if (q === 'bankroll' || location.hash === '#bankroll' || location.hash.startsWith('#bankroll-')) return 'bankroll';
   return 'autopilot';
+}
+
+function bkViewFromUrl() {
+  const q = new URLSearchParams(location.search).get('view');
+  if (q && BK_TABS.includes(q)) return q;
+  const hash = location.hash.replace(/^#/, '');
+  if (hash.startsWith('bankroll-')) {
+    const view = hash.slice('bankroll-'.length);
+    if (BK_TABS.includes(view)) return view;
+  }
+  return 'overview';
+}
+
+function bankrollUrl(view) {
+  const v = view && view !== 'overview' ? view : null;
+  return v ? `/autopilot?tab=bankroll&view=${v}` : '/autopilot?tab=bankroll';
+}
+
+function setBkTab(view, pushUrl = true) {
+  activeBkTab = BK_TABS.includes(view) ? view : 'overview';
+  BK_TABS.forEach(id => {
+    const panel = $('bkPanel' + id.charAt(0).toUpperCase() + id.slice(1));
+    if (panel) panel.hidden = id !== activeBkTab;
+  });
+  $('bkTabs')?.querySelectorAll('button').forEach(btn => {
+    const on = btn.dataset.bkTab === activeBkTab;
+    btn.classList.toggle('on', on);
+    btn.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  if (pushUrl && activeTab === 'bankroll') {
+    const url = bankrollUrl(activeBkTab);
+    if (location.pathname + location.search !== url) history.replaceState({ tab: 'bankroll', view: activeBkTab }, '', url);
+  }
+  if (activeBkTab === 'overview' && bkData) requestAnimationFrame(() => drawEquity(bkData.equity_curve));
 }
 
 function setTab(tab, pushUrl = true) {
@@ -1055,17 +1110,22 @@ function setTab(tab, pushUrl = true) {
     btn.classList.toggle('on', on);
     btn.setAttribute('aria-selected', on ? 'true' : 'false');
   });
-  const url = tab === 'bankroll' ? '/autopilot?tab=bankroll' : '/autopilot';
+  const url = tab === 'bankroll' ? bankrollUrl(activeBkTab) : '/autopilot';
   if (pushUrl && (location.pathname + location.search) !== url) {
-    history.replaceState({ tab }, '', url);
+    history.replaceState({ tab, view: tab === 'bankroll' ? activeBkTab : null }, '', url);
   }
-  if (tab === 'bankroll') startBankroll();
-  else if (dirty) $('saveBar').hidden = false;
+  if (tab === 'bankroll') {
+    setBkTab(activeBkTab, false);
+    startBankroll();
+  } else if (dirty) $('saveBar').hidden = false;
   else $('saveBar').hidden = true;
 }
 
 $('dashTabs').querySelectorAll('button').forEach(btn => {
   btn.onclick = () => setTab(btn.dataset.tab);
+});
+$('bkTabs')?.querySelectorAll('button').forEach(btn => {
+  btn.onclick = () => setBkTab(btn.dataset.bkTab);
 });
 document.querySelectorAll('a[href="/autopilot?tab=bankroll"]').forEach(a => {
   a.addEventListener('click', e => { e.preventDefault(); setTab('bankroll'); });
@@ -1314,7 +1374,7 @@ function renderBankroll(d) {
     bkMini('Concentration', risk.open_concentration_pct != null ? risk.open_concentration_pct + '%' : '—') +
     bkMini('Avg cost / fill', risk.avg_cost_per_fill != null ? money(risk.avg_cost_per_fill) : '—');
 
-  drawEquity(d.equity_curve);
+  if (activeBkTab === 'overview') requestAnimationFrame(() => drawEquity(d.equity_curve));
   renderHeatmap();
   renderCalibration(d.calibration);
 
@@ -1354,7 +1414,7 @@ async function refreshBankroll() {
 
 function startBankroll() {
   if (bkStarted) {
-    if (bkData) drawEquity(bkData.equity_curve);
+    if (bkData && activeBkTab === 'overview') drawEquity(bkData.equity_curve);
     return;
   }
   bkStarted = true;
@@ -1365,7 +1425,9 @@ function startBankroll() {
       renderHeatmap();
     };
   });
-  window.addEventListener('resize', () => { if (bkData && activeTab === 'bankroll') drawEquity(bkData.equity_curve); });
+  window.addEventListener('resize', () => {
+    if (bkData && activeTab === 'bankroll' && activeBkTab === 'overview') drawEquity(bkData.equity_curve);
+  });
   refreshBankroll();
   bkInterval = setInterval(refreshBankroll, 8000);
 }
@@ -1394,7 +1456,12 @@ function startBankroll() {
   setInterval(refreshBalances, 30000);
 
   setTab(tabFromUrl(), false);
-  window.addEventListener('popstate', () => setTab(tabFromUrl(), false));
+  activeBkTab = bkViewFromUrl();
+  if (tabFromUrl() === 'bankroll') setBkTab(activeBkTab, false);
+  window.addEventListener('popstate', () => {
+    activeBkTab = bkViewFromUrl();
+    setTab(tabFromUrl(), false);
+  });
 })();
 </script>
 <script src="/header.js?v=2"></script>
