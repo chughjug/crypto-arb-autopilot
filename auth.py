@@ -1,8 +1,7 @@
-"""Account auth with scrypt passwords and mandatory TOTP 2FA."""
+"""Account auth with mandatory TOTP 2FA (username only — no passwords)."""
 
 from __future__ import annotations
 
-import hashlib
 import os
 import re
 import secrets
@@ -23,9 +22,6 @@ SESSION_DAYS = int(os.environ.get("SESSION_DAYS", "14"))
 SESSION_COOKIE = "caa_session"
 CHALLENGE_COOKIE = "caa_2fa"
 _USERNAME_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
-_SCRYPT_N = int(os.environ.get("PASSWORD_SCRYPT_N", "16384"))  # 2^14 — fits OpenSSL mem limits on macOS
-_SCRYPT_R = 8
-_SCRYPT_P = 1
 _CHALLENGE_TTL = int(os.environ.get("AUTH_CHALLENGE_TTL", "300"))
 _SETUP_TTL = int(os.environ.get("AUTH_SETUP_TTL", "900"))
 _TOTP_ISSUER = os.environ.get("TOTP_ISSUER", "Crypto Arb")
@@ -116,57 +112,6 @@ def _normalize_username(username: str) -> str:
     return username
 
 
-def _hash_password(password: str) -> str:
-    salt = secrets.token_bytes(16)
-    digest = hashlib.scrypt(
-        password.encode("utf-8"),
-        salt=salt,
-        n=_SCRYPT_N,
-        r=_SCRYPT_R,
-        p=_SCRYPT_P,
-        dklen=32,
-    )
-    return "scrypt$" + base64_url(salt) + "$" + base64_url(digest)
-
-
-def base64_url(data: bytes) -> str:
-    import base64
-    return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
-
-
-def _b64url_decode(data: str) -> bytes:
-    import base64
-    pad = "=" * (-len(data) % 4)
-    return base64.urlsafe_b64decode(data + pad)
-
-
-def _verify_password(password: str, stored: str | None) -> bool:
-    if not stored:
-        return False
-    try:
-        if stored.startswith("scrypt$"):
-            _, salt_b64, digest_b64 = stored.split("$", 2)
-            salt = _b64url_decode(salt_b64)
-            expected = _b64url_decode(digest_b64)
-            check = hashlib.scrypt(
-                password.encode("utf-8"),
-                salt=salt,
-                n=_SCRYPT_N,
-                r=_SCRYPT_R,
-                p=_SCRYPT_P,
-                dklen=32,
-            )
-            return secrets.compare_digest(check, expected)
-        # Legacy pbkdf2
-        algo, iters, salt, digest = stored.split("$", 3)
-        if algo != "pbkdf2_sha256":
-            return False
-        check = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), int(iters))
-        return secrets.compare_digest(check.hex(), digest)
-    except (ValueError, TypeError):
-        return False
-
-
 def _user_row(row: sqlite3.Row | None) -> dict[str, Any] | None:
     if not row:
         return None
@@ -230,13 +175,10 @@ def _verify_totp(user_id: str, secret_enc: str, code: str) -> bool:
         return False
 
 
-def register(username: str, password: str, guest_id: str | None = None) -> dict[str, Any]:
+def register(username: str, guest_id: str | None = None) -> dict[str, Any]:
     """Create account and return 2FA setup material (session issued after confirm)."""
-    if len(password) < 10:
-        raise ValueError("password must be at least 10 characters")
     display = _normalize_username(username)
     key = display.lower()
-    pw_hash = _hash_password(password)
     totp_secret = pyotp.random_base32()
     now = time.time()
     with _lock:
@@ -252,9 +194,9 @@ def register(username: str, password: str, guest_id: str | None = None) -> dict[
         if uid:
             secret_enc = vault.seal_string(uid, totp_secret, purpose=vault.PURPOSE_TOTP)
             conn.execute(
-                "UPDATE users SET username=?, display_name=?, password_hash=?, "
+                "UPDATE users SET username=?, display_name=?, password_hash=NULL, "
                 "totp_secret_enc=?, totp_enabled=0, is_guest=0 WHERE id=?",
-                (key, display, pw_hash, secret_enc, uid),
+                (key, display, secret_enc, uid),
             )
         else:
             uid = _new_id()
@@ -262,7 +204,7 @@ def register(username: str, password: str, guest_id: str | None = None) -> dict[
             conn.execute(
                 "INSERT INTO users(id, email, password_hash, username, display_name, "
                 "is_guest, totp_secret_enc, totp_enabled, created_at) VALUES(?,?,?,?,?,?,?,?,?)",
-                (uid, None, pw_hash, key, display, 0, secret_enc, 0, now),
+                (uid, None, None, key, display, 0, secret_enc, 0, now),
             )
         setup_token = _issue_challenge(conn, uid, "setup", _SETUP_TTL)
         conn.commit()
@@ -293,16 +235,14 @@ def confirm_2fa_setup(setup_token: str, code: str) -> tuple[str, dict[str, Any]]
     return token, _user_row(row)  # type: ignore[return-value]
 
 
-def login(username: str, password: str) -> dict[str, Any]:
+def login(username: str) -> dict[str, Any]:
     display = _normalize_username(username)
     key = display.lower()
     with _lock:
         conn = _connect()
         row = conn.execute("SELECT * FROM users WHERE username=?", (key,)).fetchone()
         if not row or row["is_guest"]:
-            raise ValueError("invalid username or password")
-        if not _verify_password(password, row["password_hash"]):
-            raise ValueError("invalid username or password")
+            raise ValueError("unknown username — register first")
         if not row["totp_enabled"]:
             if row["totp_secret_enc"]:
                 setup_token = _issue_challenge(conn, row["id"], "setup", _SETUP_TTL)

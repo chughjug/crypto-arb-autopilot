@@ -353,7 +353,6 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 result = auth.register(
                     body.get("username") or "",
-                    body.get("password") or "",
                     guest_id=user["id"] if user and user.get("is_guest") else None,
                 )
                 self._send_json(200, result, extra)
@@ -365,9 +364,7 @@ class Handler(BaseHTTPRequestHandler):
             _, _, extra = self._current_user()
             body = self._read_json()
             try:
-                if not body.get("password"):
-                    raise ValueError("password required")
-                result = auth.login(body.get("username") or "", body.get("password") or "")
+                result = auth.login(body.get("username") or "")
                 self._send_json(200, result, extra)
             except ValueError as e:
                 self._send_json(400, {"error": str(e)}, extra)

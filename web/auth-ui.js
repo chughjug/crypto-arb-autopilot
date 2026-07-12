@@ -1,4 +1,4 @@
-/** Account page — register, login, mandatory 2FA */
+/** Account page — register, login, mandatory 2FA (username only, no passwords) */
 (function () {
   const $ = id => document.getElementById(id);
   let mode = "login";
@@ -10,14 +10,11 @@
     $("tabLogin").classList.toggle("on", m === "login");
     $("tabRegister").classList.toggle("on", m === "register");
     $("authTitle").textContent = m === "login" ? "Sign in" : "Create account";
-    $("authSubmit").textContent = m === "login" ? "Sign In" : "Create account";
-    $("password").required = true;
-    $("password").autocomplete = m === "login" ? "current-password" : "new-password";
+    $("authSubmit").textContent = m === "login" ? "Continue" : "Create account";
     $("twofaBox").classList.remove("show");
     $("setupInfo").style.display = "none";
     $("authTabs").style.display = "flex";
     $("userField").style.display = "block";
-    $("pwField").style.display = "block";
     $("authMsg").textContent = "";
   }
 
@@ -29,7 +26,6 @@
     if (kind === "setup") {
       $("authTabs").style.display = "none";
       $("userField").style.display = "none";
-      $("pwField").style.display = "none";
       $("authTitle").textContent = "Set up 2FA";
       $("authSubmit").textContent = "Confirm & sign in";
       $("twofaTitle").textContent = "Scan authenticator app";
@@ -81,7 +77,7 @@
     tabLogin.addEventListener("click", () => setMode("login"));
     tabRegister.addEventListener("click", () => setMode("register"));
 
-    $("authForm").addEventListener("submit", async e => {
+    authForm.addEventListener("submit", async e => {
       e.preventDefault();
       const msg = $("authMsg");
       msg.className = "auth-msg";
@@ -95,9 +91,7 @@
         }
 
         const username = $("username").value.trim();
-        const password = $("password").value;
         if (!username) throw new Error("Username required");
-        if (password.length < 10) throw new Error("Password must be at least 10 characters");
 
         msg.textContent = "Working…";
         if (mode === "register") {
@@ -105,7 +99,7 @@
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "same-origin",
-            body: JSON.stringify({ username, password }),
+            body: JSON.stringify({ username }),
           });
           const d = await parseJson(res);
           if (!res.ok) throw new Error(d.error || res.statusText);
@@ -122,7 +116,7 @@
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "same-origin",
-          body: JSON.stringify({ username, password }),
+          body: JSON.stringify({ username }),
         });
         const d = await parseJson(res);
         if (!res.ok) throw new Error(d.error || res.statusText);

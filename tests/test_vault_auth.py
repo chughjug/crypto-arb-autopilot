@@ -43,7 +43,7 @@ def test_totp_register_and_login_flow(tmp_path, monkeypatch):
     monkeypatch.setenv("ACCOUNTS_DB_PATH", str(db))
     auth._conn = None
 
-    reg = auth.register("trader1", "longpassword1")
+    reg = auth.register("trader1")
     assert reg["requires_2fa_setup"]
     secret = reg["totp_secret"]
     code = pyotp.TOTP(secret).now()
@@ -53,7 +53,7 @@ def test_totp_register_and_login_flow(tmp_path, monkeypatch):
     assert user["totp_enabled"]
     assert token
 
-    step = auth.login("trader1", "longpassword1")
+    step = auth.login("trader1")
     assert step["requires_2fa"]
     code2 = pyotp.TOTP(secret).now()
     token2, user2 = auth.verify_2fa(step["challenge_token"], code2)

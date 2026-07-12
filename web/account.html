@@ -30,7 +30,7 @@
 <div class="auth-wrap">
   <div class="card auth-card">
     <h1 id="authTitle">Sign in</h1>
-    <p class="sub" id="authSub">Password + authenticator app (2FA) required for all accounts.</p>
+    <p class="sub" id="authSub">Authenticator app (2FA) required — no password needed.</p>
     <div class="tabs" id="authTabs">
       <button type="button" id="tabLogin" class="on">Sign in</button>
       <button type="button" id="tabRegister">Register</button>
@@ -39,10 +39,6 @@
       <div class="field" id="userField">
         <label for="username">Username</label>
         <input id="username" required minlength="2" maxlength="32" pattern="[A-Za-z0-9_-]+" autocomplete="username" />
-      </div>
-      <div class="field" id="pwField">
-        <label for="password">Password</label>
-        <input id="password" type="password" minlength="10" autocomplete="current-password" placeholder="Min 10 characters" />
       </div>
       <div class="twofa-box" id="twofaBox">
         <p style="margin:0 0 8px;font-size:13px;font-weight:700" id="twofaTitle">Authenticator code</p>
@@ -67,7 +63,7 @@
   </div>
 </div>
 <script src="/header.js?v=4" defer></script>
-<script src="/auth-ui.js?v=5" defer></script>
+<script src="/auth-ui.js?v=6" defer></script>
 <script defer>
 document.addEventListener("DOMContentLoaded", function () {
   if (window.AccountAuth) AccountAuth.boot();
