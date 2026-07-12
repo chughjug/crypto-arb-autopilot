@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Autopilot · kalshipolyarb</title>
+<link rel="stylesheet" href="/theme.css" />
+<style>
+.ap { max-width: 960px; margin: 0 auto; padding: 20px 16px 48px; }
+.ap h1 { margin: 0 0 4px; font-size: 22px; }
+.ap-lead { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+.ap-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ap-card { border: 1px solid var(--border); border-radius: 12px; padding: 14px; background: var(--surface); }
+.ap-card h2 { margin: 0 0 8px; font-size: 14px; }
+.ap-card p { margin: 0 0 10px; font-size: 12px; color: var(--muted); }
+.ap-card.full { grid-column: span 2; }
+.ap-field { display: block; margin-bottom: 8px; }
+.ap-field span { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--muted-2); margin-bottom: 3px; }
+.ap-field input, .ap-field select, .ap-field textarea {
+  width: 100%; font: inherit; font-size: 12px; padding: 8px 10px;
+  border: 1px solid var(--border-strong); border-radius: 8px; background: #fff;
+}
+.ap-field textarea { min-height: 72px; font-family: ui-monospace, monospace; font-size: 11px; }
+.ap-btn {
+  display: inline-block; padding: 8px 14px; border-radius: 8px; border: 0;
+  background: var(--dark); color: #fff; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
+}
+.ap-btn.secondary { background: var(--surface-2); color: var(--ink); border: 1px solid var(--border); }
+.ap-btn.danger { background: #dc2626; }
+.ap-btn:disabled { opacity: .5; cursor: not-allowed; }
+.ap-status { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.ap-chip { padding: 4px 8px; border-radius: 999px; font-size: 11px; border: 1px solid var(--border); background: #fff; }
+.ap-chip.on { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
+.ap-chip.off { background: var(--surface-2); color: var(--muted); }
+.ap-strategies { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; max-height: 320px; overflow: auto; }
+.ap-strat {
+  text-align: left; padding: 10px; border: 1px solid var(--border); border-radius: 10px;
+  background: #fff; cursor: pointer; font: inherit;
+}
+.ap-strat.on { border-color: var(--dark); box-shadow: 0 0 0 2px rgba(15,23,42,.08); }
+.ap-strat b { display: block; font-size: 12px; }
+.ap-strat small { display: block; margin-top: 4px; font-size: 10px; color: var(--muted); line-height: 1.35; }
+.ap-risk { font-size: 9px; font-weight: 800; text-transform: uppercase; color: var(--muted-2); }
+.ap-log { max-height: 200px; overflow: auto; font-size: 11px; font-family: ui-monospace, monospace; }
+.ap-log div { padding: 4px 0; border-bottom: 1px dashed var(--border); }
+.ap-warn { padding: 10px; border-radius: 8px; background: #fffbeb; border: 1px solid #fde68a; font-size: 12px; color: #92400e; margin-bottom: 12px; }
+@media (max-width: 700px) { .ap-grid { grid-template-columns: 1fr; } .ap-card.full { grid-column: span 1; } }
+</style>
+<script src="/viewmode.js"></script>
+</head>
+<body>
+<div id="appHeader"></div>
+<div class="ap">
+  <h1>Crypto arb autopilot</h1>
+  <p class="ap-lead">Connect venues, pick a sizing strategy by risk profile, set bankroll — the bot scans and trades for you.</p>
+  <div class="ap-warn">Start in <b>Kalshi demo</b> + paper mode. Enable live only after connecting all venues your strategy needs. Crypto.com uses Exchange API keys.</div>
+
+  <div class="ap-grid">
+    <section class="ap-card">
+      <h2>Kalshi</h2>
+      <p>API key + RSA private key (PEM). Demo recommended.</p>
+      <label class="ap-field"><span>API key</span><input id="kApiKey" autocomplete="off" /></label>
+      <label class="ap-field"><span>Private key (PEM)</span><textarea id="kPem" placeholder="-----BEGIN RSA PRIVATE KEY-----"></textarea></label>
+      <label class="ap-field"><span>Mode</span>
+        <select id="kDemo"><option value="1">Demo</option><option value="0">Production</option></select>
+      </label>
+      <button class="ap-btn" id="kConnect">Connect Kalshi</button>
+      <div class="ap-status" id="kStatus"></div>
+    </section>
+
+    <section class="ap-card">
+      <h2>Polymarket</h2>
+      <p>Wallet private key + proxy funder address for live CLOB orders.</p>
+      <label class="ap-field"><span>Private key</span><input id="pKey" type="password" autocomplete="off" /></label>
+      <label class="ap-field"><span>Funder (0x…)</span><input id="pFunder" placeholder="0x…" autocomplete="off" /></label>
+      <button class="ap-btn" id="pConnect">Connect Polymarket</button>
+      <div class="ap-status" id="pStatus"></div>
+    </section>
+
+    <section class="ap-card">
+      <h2>Crypto.com</h2>
+      <p>Exchange API key + secret for Predict order placement.</p>
+      <label class="ap-field"><span>API key</span><input id="ccApiKey" autocomplete="off" /></label>
+      <label class="ap-field"><span>API secret</span><input id="ccSecret" type="password" autocomplete="off" /></label>
+      <button class="ap-btn" id="ccConnect">Connect Crypto.com</button>
+      <div class="ap-status" id="ccStatus"></div>
+    </section>
+
+    <section class="ap-card full">
+      <h2>Strategy</h2>
+      <p>Filter by risk — uses the same 22 sizing models as <a href="/bots">/bots</a>.</p>
+      <label class="ap-field"><span>Risk filter</span>
+        <select id="riskFilter">
+          <option value="">All</option>
+          <option value="3">Low (≤3)</option>
+          <option value="5">Moderate (≤5)</option>
+          <option value="7">High (≤7)</option>
+        </select>
+      </label>
+      <div class="ap-strategies" id="strategies"></div>
+    </section>
+
+    <section class="ap-card">
+      <h2>Bankroll</h2>
+      <label class="ap-field"><span>Total bankroll (USD)</span><input id="bankroll" type="number" min="50" step="10" value="300" /></label>
+      <label class="ap-field"><span>Reserve % (per venue buffer)</span><input id="reserve" type="number" min="10" max="50" step="5" value="30" /></label>
+      <label class="ap-field"><span>Mode</span>
+        <select id="liveMode"><option value="0">Paper / demo</option><option value="1">Live orders</option></select>
+      </label>
+      <button class="ap-btn secondary" id="saveCfg">Save settings</button>
+    </section>
+
+    <section class="ap-card">
+      <h2>Run</h2>
+      <p id="runState">Stopped</p>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="ap-btn" id="startBtn">Start autopilot</button>
+        <button class="ap-btn danger" id="stopBtn">Stop</button>
+      </div>
+      <div class="ap-status" id="balances"></div>
+    </section>
+
+    <section class="ap-card full">
+      <h2>Activity log</h2>
+      <div class="ap-log" id="logs"><div>—</div></div>
+    </section>
+  </div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+let strategies = [];
+let selected = 'half_kelly';
+
+async function api(path, opts) {
+  const r = await fetch(path, { credentials: 'same-origin', ...opts });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || r.statusText);
+  return d;
+}
+
+function renderVenue(el, v) {
+  el.innerHTML = v.connected
+    ? `<span class="ap-chip on">Connected ${v.api_key || v.funder || ''}</span>`
+    : `<span class="ap-chip off">Not connected</span>`;
+}
+
+function renderStrategies() {
+  const maxRisk = parseInt($('riskFilter').value || '99', 10);
+  $('strategies').innerHTML = strategies
+    .filter(s => (s.risk_score || 99) <= maxRisk)
+    .map(s => `<button type="button" class="ap-strat${s.id===selected?' on':''}" data-id="${s.id}">
+      <span class="ap-risk">${s.risk} · score ${s.risk_score ?? '—'}</span>
+      <b>${s.label}</b>
+      <small>${s.desc}</small>
+      <small>Edge ≥ ${s.min_edge_cents}¢ · gap ≤ ${s.max_strike_gap_pct}% · exp ${s.max_exposure_pct}%</small>
+    </button>`).join('');
+  $('strategies').querySelectorAll('.ap-strat').forEach(btn => {
+    btn.onclick = () => { selected = btn.dataset.id; renderStrategies(); };
+  });
+}
+
+async function refresh() {
+  try {
+    const st = await api('/api/autopilot/status');
+    const cfg = st.config || {};
+    selected = cfg.strategy_id || selected;
+    $('bankroll').value = cfg.bankroll_usd || 300;
+    $('reserve').value = cfg.reserve_pct || 30;
+    $('liveMode').value = cfg.live_mode ? '1' : '0';
+    $('runState').textContent = cfg.running ? 'Running' : 'Stopped';
+    (st.venues || []).forEach(v => {
+      if (v.venue === 'kalshi') renderVenue($('kStatus'), v);
+      if (v.venue === 'polymarket') renderVenue($('pStatus'), v);
+      if (v.venue === 'cryptocom') renderVenue($('ccStatus'), v);
+    });
+    const bal = st.balances || {};
+    $('balances').innerHTML = Object.entries(bal.venues || {}).map(([k,v]) =>
+      `<span class="ap-chip">${k}: ${v.error || (v.cash_cents != null ? '$'+(v.cash_cents/100).toFixed(2) : 'ok')}</span>`
+    ).join('');
+    const logs = await api('/api/autopilot/logs');
+    $('logs').innerHTML = (logs.logs || []).slice(0, 30).map(l =>
+      `<div>[${new Date(l.ts*1000).toLocaleTimeString()}] ${l.level}: ${l.message}</div>`
+    ).join('') || '<div>—</div>';
+    renderStrategies();
+  } catch (e) {
+    $('runState').textContent = 'Sign in required — visit /account first';
+  }
+}
+
+$('kConnect').onclick = async () => {
+  await api('/api/autopilot/connect/kalshi', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      api_key: $('kApiKey').value,
+      private_key: $('kPem').value,
+      demo: $('kDemo').value === '1',
+    }),
+  });
+  refresh();
+};
+
+$('pConnect').onclick = async () => {
+  await api('/api/autopilot/connect/polymarket', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ private_key: $('pKey').value, funder: $('pFunder').value }),
+  });
+  refresh();
+};
+
+$('ccConnect').onclick = async () => {
+  await api('/api/autopilot/connect/cryptocom', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ api_key: $('ccApiKey').value, api_secret: $('ccSecret').value }),
+  });
+  refresh();
+};
+
+$('saveCfg').onclick = async () => {
+  await api('/api/autopilot/config', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      strategy_id: selected,
+      bankroll_usd: parseFloat($('bankroll').value),
+      reserve_pct: parseFloat($('reserve').value),
+      live_mode: $('liveMode').value === '1',
+    }),
+  });
+  refresh();
+};
+
+$('startBtn').onclick = async () => {
+  await $('saveCfg').onclick();
+  await api('/api/autopilot/start', { method: 'POST', body: '{}' });
+  refresh();
+};
+$('stopBtn').onclick = async () => { await api('/api/autopilot/stop', { method: 'POST', body: '{}' }); refresh(); };
+$('riskFilter').onchange = renderStrategies;
+
+(async () => {
+  const d = await api('/api/autopilot/strategies');
+  strategies = d.strategies || [];
+  renderStrategies();
+  refresh();
+  setInterval(refresh, 8000);
+})();
+</script>
+</body>
+</html>

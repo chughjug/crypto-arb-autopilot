@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="manifest" href="/manifest.json" />
+<meta name="theme-color" content="#0f172a" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Future360" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>5-Minute Market · Future360</title>
+<meta name="description" content="Live detail for a single short-term crypto up/down market: countdown, spot price, live odds, upcoming schedule, and recent-window track record." />
+<link rel="stylesheet" href="/theme.css" />
+<script src="/viewmode.js"></script>
+<style>
+  /* ── breadcrumb + header ───────────────────────────────── */
+  .cm-back { display: inline-flex; align-items: center; gap: 6px; margin: 22px 0 14px; font-size: 12.5px;
+    font-weight: 700; color: var(--muted); text-decoration: none; }
+  .cm-back:hover { color: var(--ink); }
+  .cm-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .cm-mark { width: 52px; height: 52px; border-radius: 15px; flex-shrink: 0; display: grid; place-items: center;
+    font-size: 28px; border: 1px solid var(--border); background: var(--surface); box-shadow: var(--shadow-sm); }
+  .cm-htext h1 { margin: 0; font-size: 27px; font-weight: 900; letter-spacing: -1px; color: var(--ink);
+    line-height: 1.1; }
+  .cm-htext .sub { margin-top: 3px; font-size: 13px; color: var(--muted); font-weight: 600; }
+  .cm-badges { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+  .cm-badge { font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
+    border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px; color: var(--muted);
+    background: var(--surface); }
+  .cm-badge.venue.kalshi { color: var(--kalshi); border-color: var(--emerald-border); background: var(--emerald-bg); }
+  .cm-badge.live { color: #059669; background: var(--emerald-bg); border-color: var(--emerald-border);
+    display: inline-flex; align-items: center; gap: 5px; }
+  .cm-badge.live::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #10b981;
+    animation: pulse 1.6s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+
+  /* ── main two-column grid ──────────────────────────────── */
+  .cm-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 14px; margin-top: 20px;
+    align-items: start; }
+  html.vm-compact { .cm-grid { grid-template-columns: 1fr; } }
+
+  /* ── live window hero ──────────────────────────────────── */
+  .hero { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card);
+    box-shadow: var(--shadow-sm); overflow: hidden; border-top: 4px solid var(--border-strong); }
+  .hero.live { border-top-color: #10b981; }
+  .hero.next { border-top-color: #f59e0b; }
+  .hero-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px 10px; }
+  .hero-state { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--muted-2); }
+  .hero-state b { color: var(--ink); }
+  .hero-window { font-size: 13px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .hero-cd { text-align: right; }
+  .hero-cd .lab { font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted-2); }
+  .hero-cd .val { font-size: 34px; font-weight: 900; color: var(--ink); font-variant-numeric: tabular-nums;
+    letter-spacing: -1.5px; line-height: 1; margin-top: 2px; }
+  .hero-cd .val.hot { color: var(--red); }
+  .hero-bar { height: 6px; background: var(--surface-2); margin: 8px 20px 0; border-radius: 999px; overflow: hidden; }
+  .hero-bar i { display: block; height: 100%; border-radius: 999px; background: #10b981; transform-origin: left;
+    transform: scaleX(0); transition: transform .5s linear; }
+  .hero.next .hero-bar i { background: #f59e0b; }
+
+  .hero-q { padding: 14px 20px 4px; font-size: 15px; font-weight: 800; color: var(--ink); letter-spacing: -.3px; }
+  .hero-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 8px 20px 20px; }
+  .obtn { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 16px 12px;
+    border: 1.5px solid var(--border-strong); border-radius: var(--radius-md); background: var(--surface);
+    cursor: pointer; font: inherit; transition: border-color .12s, background .12s, transform .1s; }
+  .obtn:hover { background: var(--surface-2); }
+  .obtn:active { transform: scale(.98); }
+  .obtn .side { font-size: 13px; font-weight: 800; letter-spacing: .02em; }
+  .obtn .px { font-size: 30px; font-weight: 900; color: var(--ink); font-variant-numeric: tabular-nums; letter-spacing: -1px; }
+  .obtn .imp { font-size: 11px; font-weight: 700; color: var(--muted-2); font-variant-numeric: tabular-nums; }
+  .obtn.up { border-color: color-mix(in srgb, var(--emerald) 40%, var(--border)); }
+  .obtn.up .side { color: var(--emerald); }
+  .obtn.up:hover { background: var(--emerald-bg); }
+  .obtn.dn { border-color: color-mix(in srgb, var(--red) 38%, var(--border)); }
+  .obtn.dn .side { color: var(--red); }
+  .obtn.dn:hover { background: var(--red-bg); }
+  .obtn.picked { box-shadow: 0 0 0 2px var(--ink) inset; border-color: var(--ink); background: var(--poly-bg); }
+  .hero-empty { padding: 34px 20px; text-align: center; color: var(--muted-2); font-size: 14px; }
+
+  /* ── side panels ───────────────────────────────────────── */
+  .side { display: flex; flex-direction: column; gap: 14px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm); overflow: hidden; }
+  .card-h { padding: 10px 16px; border-bottom: 1px solid var(--border); background: var(--surface-2);
+    font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--muted-2); }
+  .spot { padding: 16px 18px; }
+  .spot .lab { font-size: 11px; font-weight: 700; color: var(--muted-2); }
+  .spot .v { font-size: 30px; font-weight: 900; color: var(--ink); font-variant-numeric: tabular-nums;
+    letter-spacing: -1px; line-height: 1.05; margin-top: 2px; }
+  .spot .c { font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; margin-top: 3px; }
+  .spot .c.up { color: var(--emerald); }
+  .spot .c.down { color: var(--red); }
+  .spot .hint { font-size: 11px; color: var(--muted-2); font-weight: 600; margin-top: 8px; line-height: 1.4; }
+
+  .facts { display: flex; flex-direction: column; }
+  .fact { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 16px;
+    border-bottom: 1px solid var(--border); font-size: 12.5px; }
+  .fact:last-child { border-bottom: none; }
+  .fact .k { color: var(--muted); font-weight: 600; }
+  .fact .val { color: var(--ink); font-weight: 800; font-variant-numeric: tabular-nums; text-align: right; }
+  .fact .val a { color: var(--poly); text-decoration: none; }
+  .fact .val a:hover { text-decoration: underline; }
+
+  /* ── schedule + track record ───────────────────────────── */
+  .sec-title { font-size: 13px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
+    color: var(--muted-2); margin: 26px 0 11px; display: flex; align-items: center; gap: 9px; }
+  .wrow { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+  .wrow:last-child { border-bottom: none; }
+  .wrow .wtime { width: 128px; flex-shrink: 0; font-size: 12.5px; font-weight: 800; color: var(--ink);
+    font-variant-numeric: tabular-nums; }
+  .wrow .wtag { font-size: 9.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
+    border-radius: 5px; padding: 2px 7px; flex-shrink: 0; }
+  .wtag.live { color: #059669; background: var(--emerald-bg); border: 1px solid var(--emerald-border); }
+  .wtag.upcoming { color: var(--muted); background: var(--surface-2); border: 1px solid var(--border); }
+  .wtag.past { color: var(--muted-2); background: var(--surface-2); border: 1px solid var(--border); }
+  .wrow .wcd { flex: 1; font-size: 11.5px; color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .wrow .wyes { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .wrow .wyes .bar { width: 72px; height: 6px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+  .wrow .wyes .bar i { display: block; height: 100%; background: var(--emerald); border-radius: 999px; }
+  .wrow .wyes .n { width: 40px; text-align: right; font-size: 13px; font-weight: 900; color: var(--ink);
+    font-variant-numeric: tabular-nums; }
+  .wrow .wvol { width: 62px; text-align: right; font-size: 11px; font-weight: 700; color: var(--muted-2);
+    font-variant-numeric: tabular-nums; flex-shrink: 0; }
+  .wrow.clk { cursor: pointer; }
+  .wrow.clk:hover { background: var(--surface-2); }
+  html.vm-mobile { .wrow .wcd, .wrow .wvol { display: none; } .wrow .wtime { width: 110px; } }
+
+  .cm-load { padding: 60px 20px; text-align: center; color: var(--muted-2); font-size: 14px; }
+  .cm-err { padding: 44px 20px; text-align: center; color: var(--muted-2); font-size: 14px; }
+  .cm-err a { color: var(--poly); font-weight: 700; }
+
+  /* ── bet slip (shared with crypto.html) ────────────────── */
+  .slip-fab { position: fixed; bottom: 22px; right: 22px; width: 54px; height: 54px; border-radius: 50%;
+    background: var(--dark); color: #fff; border: none; box-shadow: var(--shadow-lg); cursor: pointer;
+    display: none; place-items: center; font-size: 21px; z-index: 100; }
+  .slip-fab.vis { display: grid; }
+  .slip-count { position: absolute; top: -2px; right: -2px; background: var(--red); color: #fff;
+    font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 999px; border: 2px solid #fff; }
+  .slip-panel { position: fixed; top: 0; right: 0; bottom: 0; width: 280px; background: var(--surface);
+    border-left: 1px solid var(--border); box-shadow: var(--shadow-lg); display: flex; flex-direction: column;
+    transform: translateX(100%); transition: transform .22s ease-out; z-index: 1000; }
+  .slip-panel.open { transform: none; }
+  .sl-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px;
+    border-bottom: 1px solid var(--border); background: var(--surface-2); }
+  .sl-head h3 { margin: 0; font-size: 14px; font-weight: 900; color: var(--ink); letter-spacing: -.3px; }
+  .sl-close { background: none; border: none; cursor: pointer; font-size: 18px; color: var(--muted); }
+  .sl-body { flex: 1; overflow-y: auto; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+  .sl-empty { padding: 30px 0; text-align: center; color: var(--muted-2); font-size: 12px; }
+  .sl-card { background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 9px 11px;
+    position: relative; display: flex; flex-direction: column; gap: 3px; }
+  .sl-rm { position: absolute; top: 8px; right: 8px; background: none; border: none; cursor: pointer;
+    font-size: 13px; color: var(--muted-2); padding: 2px; }
+  .sl-rm:hover { color: var(--red); }
+  .sl-title { font-size: 11.5px; font-weight: 700; color: var(--ink); padding-right: 16px; line-height: 1.3;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .sl-market { font-size: 9px; color: var(--muted-2); font-weight: 700; text-transform: uppercase; letter-spacing: .3px; }
+  .sl-pick { font-size: 12.5px; font-weight: 800; color: var(--ink); margin-top: 1px; }
+  .sl-meta { display: flex; align-items: center; justify-content: space-between; font-size: 11px;
+    font-weight: 700; color: var(--ink); border-top: 1px dashed var(--border); padding-top: 5px; margin-top: 3px; }
+  .sl-meta b { font-variant-numeric: tabular-nums; }
+  .sl-foot { padding: 12px 14px 18px; border-top: 1px solid var(--border); background: var(--surface-2); }
+  .sl-row { display: flex; align-items: center; justify-content: space-between; font-size: 12px;
+    font-weight: 700; color: var(--muted); margin-bottom: 7px; }
+  .sl-row.total { font-size: 14px; font-weight: 900; color: var(--ink); margin-bottom: 0; }
+  .sl-row b { font-variant-numeric: tabular-nums; }
+  html.vm-wide {
+    body.has-slip { padding-right: 280px; }
+    body.has-slip .slip-panel { transform: none; }
+    body.has-slip .slip-fab { display: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div id="appHeader"></div>
+
+<div class="page">
+  <a class="cm-back" href="/crypto#live">← All crypto markets</a>
+  <div id="main"><div class="cm-load">Connecting to live feed…</div></div>
+</div>
+
+<!-- bet slip -->
+<div class="slip-panel" id="slipPanel">
+  <div class="sl-head">
+    <h3>Bet Slip</h3>
+    <button class="sl-close" id="slipClose" aria-label="Close">&times;</button>
+  </div>
+  <div class="sl-body" id="slipLegs"></div>
+  <div class="sl-foot">
+    <div class="sl-row"><span>Legs</span><b id="slCount">0</b></div>
+    <div class="sl-row total"><span>Arb yield if all legs pay</span><b id="slArb">0.00%</b></div>
+  </div>
+</div>
+<button class="slip-fab" id="slipFab">🎫<span class="slip-count" id="slipFabCount" style="display:none">0</span></button>
+
+<script src="/header.js"></script>
+<script src="/live.js"></script>
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+const qp = new URLSearchParams(location.search);
+const P = {
+  coin: (qp.get("coin") || "").toUpperCase(),
+  freq: (qp.get("freq") || "").toLowerCase(),
+  src:  (qp.get("src") || qp.get("source") || "").toLowerCase(),
+};
+
+let data = null;
+let slip = [];
+try { slip = JSON.parse(localStorage.getItem("crypto_arb_slip") || "[]"); } catch (e) {}
+
+/* ── formatting ─────────────────────────────────────────── */
+function fmtVol(v) {
+  v = +v || 0;
+  if (v >= 1e9) return "$" + (v / 1e9).toFixed(1) + "B";
+  if (v >= 1e6) return "$" + (v / 1e6).toFixed(1) + "M";
+  if (v >= 1e3) return "$" + (v / 1e3).toFixed(1) + "K";
+  return "$" + Math.round(v);
+}
+function fmtPrice(p) {
+  if (p == null) return "—";
+  if (p >= 1000) return "$" + p.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (p >= 1) return "$" + p.toFixed(2);
+  return "$" + p.toFixed(4);
+}
+const cents = v => (v == null ? "—" : Math.round(v) + "¢");
+const impPct = v => (v == null ? "" : Math.round(v) + "% implied");
+const fmtET = ts => new Date(ts * 1000).toLocaleTimeString("en-US",
+  { hour: "numeric", minute: "2-digit", timeZone: "America/New_York" });
+function fmtDur(s) {
+  s = Math.max(0, Math.round(s));
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), ss = s % 60;
+  if (h) return `${h}:${String(m).padStart(2, "0")}:${String(ss).padStart(2, "0")}`;
+  return `${m}:${String(ss).padStart(2, "0")}`;
+}
+
+/* Up / Down (updown) or Above / Below <target> (target) labels */
+function sideLabels(w) {
+  if (data.kind === "updown") return { up: "▲ Up", dn: "▼ Down" };
+  const t = w && w.target != null ? " " + fmtPrice(w.target) : "";
+  return { up: "Above" + t, dn: "Below" + t };
+}
+
+/* ── focus window = the live one, else the next upcoming ─── */
+function windows() { return (data && data.windows) || []; }
+function nowS() { return Date.now() / 1000; }
+function focusWindow() {
+  const ws = windows(), n = nowS();
+  return ws.find(w => w.start <= n && n < w.end) || ws.find(w => w.start > n) || null;
+}
+
+/* ── render ─────────────────────────────────────────────── */
+function render() {
+  const main = $("#main");
+  const ws = windows();
+
+  if (!P.coin || !P.freq || !P.src) {
+    main.innerHTML = `<div class="cm-err">Missing market parameters. <a href="/crypto#live">Back to crypto markets →</a></div>`;
+    return;
+  }
+  if (!ws.length) {
+    main.innerHTML = `<div class="cm-err">No ${esc(P.freq)} ${esc(data ? data.name : P.coin)} windows are scheduled on ${esc(P.src)} right now.<br><a href="/crypto#live">Back to crypto markets →</a></div>`;
+    return;
+  }
+
+  const focus = focusWindow();
+  const live = focus && focus.status === "live";
+  const labels = sideLabels(focus);
+  const venueName = P.src === "kalshi" ? "Kalshi" : "Polymarket";
+  const kindDesc = data.kind === "updown"
+    ? `Will ${data.name} close higher at the end of each ${esc(P.freq)} window?`
+    : `Will ${data.name} be above the target at each ${esc(P.freq)} window close?`;
+
+  const heroInner = focus ? `
+    <div class="hero-top">
+      <div>
+        <div class="hero-state">${live ? "<b>Live window</b> · closes in" : "Next window · opens in"}</div>
+        <div class="hero-window" id="heroWindow">${fmtET(focus.start)} – ${fmtET(focus.end)} ET</div>
+      </div>
+      <div class="hero-cd"><div class="lab">${live ? "Time left" : "Starts in"}</div><div class="val" id="heroCd">—</div></div>
+    </div>
+    <div class="hero-bar"><i id="heroBarI"></i></div>
+    <div class="hero-q">${esc(kindDesc)}</div>
+    <div class="hero-btns">
+      <button class="obtn up" data-side="Up"><span class="side">${esc(labels.up)}</span>
+        <span class="px" id="pxUp">—</span><span class="imp" id="impUp"></span></button>
+      <button class="obtn dn" data-side="Down"><span class="side">${esc(labels.dn)}</span>
+        <span class="px" id="pxDn">—</span><span class="imp" id="impDn"></span></button>
+    </div>` : `<div class="hero-empty">No open or upcoming window in the schedule.</div>`;
+
+  const spot = data.spot;
+  const spotHtml = spot ? `
+    <div class="spot">
+      <div class="lab">${esc(data.name)} spot</div>
+      <div class="v">${fmtPrice(spot.price)}</div>
+      <div class="c ${spot.change >= 0 ? "up" : "down"}">${spot.change >= 0 ? "+" : ""}${spot.change.toFixed(2)}% · 24h</div>
+      <div class="hint">${data.kind === "updown"
+        ? "Up wins if spot closes above its level at window open."
+        : "Above wins if spot is over the target at window close."}</div>
+    </div>` : `<div class="spot"><div class="lab">${esc(data.name)} spot</div>
+      <div class="v" style="font-size:16px;color:var(--muted)">Not tracked</div></div>`;
+
+  const factsHtml = `
+    <div class="facts">
+      <div class="fact"><span class="k">Venue</span><span class="val">${venueName}</span></div>
+      <div class="fact"><span class="k">Cadence</span><span class="val">${esc(P.freq)} windows</span></div>
+      <div class="fact"><span class="k">Type</span><span class="val">${data.kind === "updown" ? "Up / Down" : "Target price"}</span></div>
+      ${focus && focus.target != null ? `<div class="fact"><span class="k">Target</span><span class="val">${fmtPrice(focus.target)}</span></div>` : ""}
+      <div class="fact"><span class="k">Window volume</span><span class="val" id="factVol">${focus ? fmtVol(focus.volume) : "—"}</span></div>
+      ${focus && focus.url ? `<div class="fact"><span class="k">Source</span><span class="val"><a href="${esc(focus.url)}" target="_blank" rel="noopener">Open on ${venueName} ↗</a></span></div>` : ""}
+    </div>`;
+
+  const upcoming = ws.filter(w => w.status === "upcoming").slice(0, 8);
+  const recent = ws.filter(w => w.status === "past").slice(-6).reverse();
+
+  main.innerHTML = `
+    <div class="cm-head">
+      <div class="cm-mark" style="border-color:${esc(data.accent)}55">${esc(data.emoji)}</div>
+      <div class="cm-htext">
+        <h1>${esc(data.name)} · ${esc(P.freq)}</h1>
+        <div class="sub">${data.kind === "updown" ? "Up or Down" : "Target price"} market · ${venueName}</div>
+      </div>
+      <div class="cm-badges">
+        ${live ? `<span class="cm-badge live">Live</span>` : ""}
+        <span class="cm-badge">${esc(P.freq)}</span>
+        <span class="cm-badge venue ${esc(P.src)}">${venueName}</span>
+      </div>
+    </div>
+
+    <div class="cm-grid">
+      <div class="hero ${live ? "live" : "next"}" id="hero">${heroInner}</div>
+      <div class="side">
+        <div class="card"><div class="card-h">Underlying</div>${spotHtml}</div>
+        <div class="card"><div class="card-h">Market details</div>${factsHtml}</div>
+      </div>
+    </div>
+
+    ${upcoming.length ? `<div class="sec-title">Upcoming windows</div>
+      <div class="card">${upcoming.map(rowHtml).join("")}</div>` : ""}
+    ${recent.length ? `<div class="sec-title">Recent windows</div>
+      <div class="card">${recent.map(rowHtml).join("")}</div>` : ""}`;
+
+  // wire hero up/down buttons
+  main.querySelectorAll(".obtn").forEach(b =>
+    b.addEventListener("click", () => onBet(focus, b.dataset.side)));
+
+  tick();          // paint countdown + odds immediately
+  syncPicked();
+}
+
+function rowHtml(w) {
+  const n = nowS();
+  let cd;
+  if (w.status === "live") cd = "closes in " + fmtDur(w.end - n);
+  else if (w.status === "upcoming") cd = "opens in " + fmtDur(w.start - n);
+  else cd = "settled";
+  const yes = w.yes;
+  return `
+    <div class="wrow">
+      <span class="wtime">${fmtET(w.start)}–${fmtET(w.end)}</span>
+      <span class="wtag ${w.status}">${w.status === "live" ? "Live" : w.status === "upcoming" ? "Soon" : "Past"}</span>
+      <span class="wcd">${cd}</span>
+      <span class="wyes">
+        <span class="bar"><i style="width:${yes == null ? 0 : Math.max(0, Math.min(100, yes))}%"></i></span>
+        <span class="n">${cents(yes)}</span>
+      </span>
+      <span class="wvol">${fmtVol(w.volume)}</span>
+    </div>`;
+}
+
+/* ── 1-second tick: countdown, progress, odds refresh ───── */
+function tick() {
+  if (!data) return;
+  const focus = focusWindow();
+  const hero = $("#hero");
+  const cd = $("#heroCd"), bar = $("#heroBarI");
+  if (focus && cd && bar) {
+    const n = nowS();
+    if (n >= focus.start && n < focus.end) {          // live
+      const left = focus.end - n;
+      cd.textContent = fmtDur(left);
+      cd.className = "val" + (left <= 60 ? " hot" : "");
+      bar.style.transform = `scaleX(${Math.max(0, Math.min(1, left / (focus.end - focus.start)))})`;
+      if (hero) hero.className = "hero live";
+    } else {                                          // upcoming
+      cd.textContent = fmtDur(focus.start - n);
+      cd.className = "val";
+      bar.style.transform = "scaleX(1)";
+      if (hero) hero.className = "hero next";
+    }
+  }
+  // odds
+  const up = focus ? focus.yes : null;
+  const dn = up == null ? null : 100 - up;
+  const setPx = (id, imp, v) => {
+    const e = $(id); if (e) e.textContent = cents(v);
+    const i = $(imp); if (i) i.textContent = impPct(v);
+  };
+  setPx("#pxUp", "#impUp", up);
+  setPx("#pxDn", "#impDn", dn);
+
+  // when the live window rolls over, re-render + pull a fresh snapshot
+  const n2 = nowS();
+  if (focus && n2 >= focus.end) {
+    render();
+    const t = Date.now();
+    if (t - (tick._at || 0) > 2500) { tick._at = t; refetch(); }
+  }
+}
+setInterval(tick, 1000);
+
+/* ── bet slip ───────────────────────────────────────────── */
+function onBet(w, side) {
+  if (!w) return;
+  const up = w.yes;
+  const px = side === "Up" ? up : (up == null ? null : 100 - up);
+  const labels = sideLabels(w);
+  slipToggle({
+    id: `${w.id}:${side}`,
+    dedupe: w.id,
+    pick: side === "Up" ? labels.up.replace(/^[▲▼]\s*/, "") : labels.dn.replace(/^[▲▼]\s*/, ""),
+    title: `${data.name} ${P.freq} · ${fmtET(w.start)}–${fmtET(w.end)} ET`,
+    pct: px,
+    source: data.source,
+    url: w.url,
+  });
+}
+
+function slipToggle(leg) {
+  const i = slip.findIndex(l => l.id === leg.id);
+  if (i >= 0) slip.splice(i, 1);
+  else { slip = slip.filter(l => l.dedupe !== leg.dedupe); slip.push(leg); }
+  localStorage.setItem("crypto_arb_slip", JSON.stringify(slip));
+  renderSlip();
+  syncPicked();
+}
+
+function renderSlip() {
+  const n = slip.length;
+  $("#slCount").textContent = n;
+  $("#slipFabCount").textContent = n;
+  $("#slipFabCount").style.display = n ? "inline-block" : "none";
+  $("#slipFab").classList.toggle("vis", n > 0);
+  document.body.classList.toggle("has-slip", n > 0);
+  if (!n) $("#slipPanel").classList.remove("open");
+
+  let yieldVal = 0;
+  if (n >= 2) {
+    const sum = slip.reduce((s, l) => s + (l.pct || 50), 0);
+    if (sum < 100) yieldVal = (100 / sum - 1) * 100;
+  }
+  $("#slArb").textContent = yieldVal.toFixed(2) + "%";
+
+  $("#slipLegs").innerHTML = n ? slip.map((leg, i) => `
+    <div class="sl-card">
+      <button class="sl-rm" data-i="${i}">&times;</button>
+      <div class="sl-market">${esc((leg.source || "").toUpperCase())}</div>
+      <div class="sl-title">${esc(leg.title)}</div>
+      <div class="sl-pick">${esc(leg.pick)}</div>
+      <div class="sl-meta"><span>Price</span><b>${cents(leg.pct)}</b></div>
+    </div>`).join("")
+    : `<div class="sl-empty">Tap the Up/Down prices to build positions. Legs sync with the main crypto page.</div>`;
+  $("#slipLegs").querySelectorAll(".sl-rm").forEach(btn =>
+    btn.addEventListener("click", () => {
+      slip.splice(+btn.dataset.i, 1);
+      localStorage.setItem("crypto_arb_slip", JSON.stringify(slip));
+      renderSlip(); syncPicked();
+    }));
+}
+
+function syncPicked() {
+  const ids = new Set(slip.map(l => l.id));
+  document.querySelectorAll(".obtn").forEach(b => {
+    const w = focusWindow();
+    b.classList.toggle("picked", !!(w && ids.has(`${w.id}:${b.dataset.side}`)));
+  });
+}
+
+$("#slipClose").addEventListener("click", () => $("#slipPanel").classList.remove("open"));
+$("#slipFab").addEventListener("click", () => $("#slipPanel").classList.toggle("open"));
+
+/* ── live feed ──────────────────────────────────────────── */
+let firstPaint = false;
+function onData(d) {
+  if (!d || d.error || d.type !== "crypto_series") return;
+  data = d;
+  render();
+  firstPaint = true;
+}
+function refetch() {
+  fetch(`/api/crypto/series?coin=${encodeURIComponent(P.coin)}&freq=${encodeURIComponent(P.freq)}&src=${encodeURIComponent(P.src)}`)
+    .then(r => r.json()).then(onData).catch(() => {});
+}
+
+document.title = `${P.coin || "Crypto"} ${P.freq || ""} · Future360`.trim();
+AppHeader.mount("#appHeader");
+Live.LiveChannel({
+  ws: `/ws/crypto/series?coin=${encodeURIComponent(P.coin)}&freq=${encodeURIComponent(P.freq)}&src=${encodeURIComponent(P.src)}`,
+  poll: `/api/crypto/series?coin=${encodeURIComponent(P.coin)}&freq=${encodeURIComponent(P.freq)}&src=${encodeURIComponent(P.src)}`,
+  interval: 3000,
+  onData,
+});
+renderSlip();
+</script>
+<script src="/pwa.js" defer></script>
+</body>
+</html>

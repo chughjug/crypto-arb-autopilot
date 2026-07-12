@@ -1,0 +1,21 @@
+{
+  "name": "Crypto Arb Autopilot",
+  "description": "3-venue crypto prediction market arb scanner, paper bots, and user autopilot",
+  "repository": "https://github.com/chughjug/crypto-arb-autopilot",
+  "keywords": ["crypto", "kalshi", "polymarket", "cryptocom", "arbitrage", "prediction-markets"],
+  "env": {
+    "AUTOPILOT_SECRET_KEY": {
+      "description": "Fernet key seed for encrypting user venue credentials",
+      "generator": "secret"
+    },
+    "CATALOG_WARM": { "value": "1" },
+    "CATALOG_DB_PATH": { "value": "/tmp/catalog.db" },
+    "ACCOUNTS_DB_PATH": { "value": "/tmp/accounts.db" },
+    "AUTOPILOT_DB_PATH": { "value": "/tmp/autopilot.db" },
+    "CRYPTO_ARB_POLL_SECONDS": { "value": "3" },
+    "CRYPTO_LIVE_INTERVAL": { "value": "3" }
+  },
+  "formation": {
+    "web": { "quantity": 1, "size": "basic" }
+  }
+}

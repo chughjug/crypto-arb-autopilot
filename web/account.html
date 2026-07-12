@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="manifest" href="/manifest.json" />
+<meta name="theme-color" content="#0f172a" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Account · Crypto Arb</title>
+<link rel="stylesheet" href="/theme.css" />
+<script src="/viewmode.js"></script>
+<style>
+  .auth-wrap { max-width: 420px; margin: 48px auto 80px; padding: 0 20px; }
+  .auth-card { padding: 28px; }
+  .auth-card h1 { margin: 0 0 6px; font-size: 26px; font-weight: 800; }
+  .auth-card .sub { color: var(--muted); font-size: 14px; margin: 0 0 22px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12px; font-weight: 700; color: var(--muted-2); text-transform: uppercase; margin-bottom: 6px; }
+  .field input { width: 100%; padding: 12px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); font-size: 15px; }
+  .auth-msg { min-height: 20px; font-size: 13px; color: var(--red); margin: 10px 0; }
+  .auth-msg.ok { color: var(--emerald); }
+  .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+  .tabs button { flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: #fff; font-weight: 700; cursor: pointer; }
+  .tabs button.on { background: var(--dark); color: #fff; border-color: var(--dark); }
+</style>
+</head>
+<body>
+<div id="appHeader"></div>
+<div class="auth-wrap">
+  <div class="card auth-card">
+    <h1 id="authTitle">Sign in</h1>
+    <p class="sub">Create an account to save venue credentials and run autopilot.</p>
+    <div class="tabs">
+      <button type="button" id="tabLogin" class="on">Sign in</button>
+      <button type="button" id="tabRegister">Register</button>
+    </div>
+    <form id="authForm">
+      <div class="field">
+        <label for="username">Username</label>
+        <input id="username" required minlength="2" maxlength="32" pattern="[A-Za-z0-9_-]+" autocomplete="username" />
+      </div>
+      <div class="field" id="pwField">
+        <label for="password">Password</label>
+        <input id="password" type="password" minlength="8" autocomplete="current-password" />
+      </div>
+      <div class="auth-msg" id="authMsg"></div>
+      <button class="btn" type="submit" style="width:100%" id="authSubmit">Sign In</button>
+    </form>
+    <p style="margin-top:16px;font-size:13px;color:var(--muted);text-align:center">
+      <a href="/autopilot">Autopilot →</a>
+    </p>
+  </div>
+</div>
+<script src="/header.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+let mode = 'login';
+function setMode(m) {
+  mode = m;
+  $('tabLogin').classList.toggle('on', m === 'login');
+  $('tabRegister').classList.toggle('on', m === 'register');
+  $('authTitle').textContent = m === 'login' ? 'Sign in' : 'Create account';
+  $('authSubmit').textContent = m === 'login' ? 'Sign In' : 'Register';
+  $('password').required = m === 'register';
+}
+$('tabLogin').onclick = () => setMode('login');
+$('tabRegister').onclick = () => setMode('register');
+$('authForm').onsubmit = async e => {
+  e.preventDefault();
+  const msg = $('authMsg');
+  msg.className = 'auth-msg';
+  msg.textContent = 'Working…';
+  const path = mode === 'register' ? '/api/auth/register' : '/api/auth/login';
+  try {
+    const res = await fetch(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: $('username').value.trim(),
+        password: $('password').value,
+      }),
+    });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || res.statusText);
+    msg.className = 'auth-msg ok';
+    msg.textContent = 'Success — redirecting…';
+    location.href = '/autopilot';
+  } catch (err) {
+    msg.textContent = err.message;
+  }
+};
+AppHeader.mount('#appHeader');
+fetch('/api/auth/me').then(r => r.json()).then(d => {
+  if (d.user && !d.user.is_guest) location.href = '/autopilot';
+});
+</script>
+</body>
+</html>

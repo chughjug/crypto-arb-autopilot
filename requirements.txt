@@ -1,0 +1,6 @@
+# Arbitrage bot dependencies (server.py remains stdlib-only)
+websockets>=12.0
+cryptography>=42.0
+
+# Optional: live Polymarket order placement
+py-clob-client-v2>=0.1.0

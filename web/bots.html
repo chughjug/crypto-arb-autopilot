@@ -1,0 +1,986 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Paper Bots · Future360</title>
+<link rel="stylesheet" href="/theme.css" />
+<link rel="stylesheet" href="/bot-panel.css" />
+<script src="/viewmode.js"></script>
+</head>
+<body>
+<div id="appHeader"></div>
+<div class="page bots-terminal">
+
+  <header class="cmd-strip">
+    <div class="cmd-brand">
+      <div class="cmd-eyebrow"><span class="live-dot"></span> Paper sizing lab</div>
+      <h1>Bot performance</h1>
+      <p>22 independent strategies · same opportunities · $50 bankroll each</p>
+    </div>
+    <div class="cmd-kpis" id="summaryCards">
+      <div class="kpi-chip skeleton"></div>
+      <div class="kpi-chip skeleton"></div>
+      <div class="kpi-chip skeleton"></div>
+      <div class="kpi-chip skeleton"></div>
+    </div>
+    <div class="cmd-actions">
+      <div class="cmd-live"><span class="refresh-dot"></span> <span id="timestamp">—</span></div>
+      <a class="cmd-link" href="/cryptoarbitrage">Scanner ↗</a>
+    </div>
+  </header>
+
+  <nav class="cmd-nav" id="viewTabs" aria-label="Bot views">
+    <button type="button" class="active" data-view="leaderboard">Overview</button>
+    <button type="button" data-view="compare">Compare</button>
+    <button type="button" data-view="spread">Heatmaps</button>
+    <button type="button" data-view="calibration">Calibration</button>
+    <button type="button" data-view="allocator">Allocator</button>
+    <button type="button" data-view="bots">Strategies</button>
+  </nav>
+
+  <main class="cmd-main">
+
+    <section class="cmd-view active" id="view-leaderboard" data-view-panel="leaderboard">
+      <div class="dash-grid">
+        <article class="dash-panel dash-chart">
+          <header class="panel-head">
+            <div>
+              <h2>Equity paths</h2>
+              <p>Projected equity across strategies (cash + open payout)</p>
+            </div>
+            <div class="seg" id="overlayControls">
+              <button type="button" class="active" data-overlay-mode="top">Top 5</button>
+              <button type="button" data-overlay-mode="all">All</button>
+            </div>
+          </header>
+          <canvas id="equityOverlay" height="200"></canvas>
+          <div class="legend-row" id="equityOverlayLegend"></div>
+        </article>
+
+        <article class="dash-panel dash-queue">
+          <header class="panel-head">
+            <div>
+              <h2>Settlement queue</h2>
+              <p>Open paired trades · soonest expiry first</p>
+            </div>
+            <div class="panel-stat" id="openBookSum">—</div>
+          </header>
+          <div class="data-table-wrap compact" id="openBook"><div class="empty">No open trades.</div></div>
+        </article>
+
+        <article class="dash-panel dash-rank span-2">
+          <header class="panel-head">
+            <div>
+              <h2>Strategy rank</h2>
+              <p>Confirmed P&amp;L · risk · exposure — click row for full ledger</p>
+            </div>
+          </header>
+          <div class="rank-table">
+            <div class="rank-h">
+              <div>#</div><div>Strategy</div><div>Equity</div><div>P&amp;L</div><div>Ret</div><div>Max DD</div><div>Exp</div><div>Conc</div>
+            </div>
+            <div id="leaderboard"></div>
+          </div>
+          <p class="foot-note">Max DD = peak-to-trough equity · Exp = deployed/equity · Conc = largest open/deployed</p>
+        </article>
+
+        <article class="dash-panel dash-funnel">
+          <header class="panel-head">
+            <div>
+              <h2>Opportunity funnel</h2>
+              <p>Scanned → eligible → taken → skipped</p>
+            </div>
+            <div class="panel-stat" id="funnelSum">—</div>
+          </header>
+          <div id="funnelPanel"><div class="empty">Waiting for scan data…</div></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="cmd-view" id="view-compare" data-view-panel="compare">
+      <header class="panel-head">
+        <div>
+          <h2>Head-to-head compare</h2>
+          <p>Pick 2–3 strategies — P&amp;L, risk, sizing, funnel, timing</p>
+        </div>
+        <div class="panel-stat warn" id="comparePickNote">Select 2–3</div>
+      </header>
+      <div class="chip-row" id="comparePicker"></div>
+      <div class="compare-grid" id="compareGrid"><div class="empty">Select 2–3 strategies above.</div></div>
+    </section>
+
+    <section class="cmd-view" id="view-spread" data-view-panel="spread">
+      <header class="panel-head">
+        <div>
+          <h2 id="heatmapTitle">Spread deployment</h2>
+          <p id="heatmapCopy">Where capital deploys by entry spread width</p>
+        </div>
+        <div class="panel-controls">
+          <div class="seg" id="heatmapModeSwitch">
+            <button class="active" data-heatmap-mode="spread">Spread</button>
+            <button data-heatmap-mode="coin">Coin</button>
+            <button data-heatmap-mode="expiry">Expiry</button>
+          </div>
+          <div class="seg" id="spreadMetricSwitch">
+            <button data-spread-metric="pnl">P&amp;L</button>
+            <button class="active" data-spread-metric="contracts">Contracts</button>
+            <button data-spread-metric="trades">Trades</button>
+          </div>
+        </div>
+      </header>
+      <div class="heat-legend">
+        <span><i class="swatch low"></i> Low</span>
+        <span><i class="swatch high"></i> High</span>
+        <b id="heatmapLegendNote">Spread = $1 − YES cost − NO cost</b>
+      </div>
+      <div class="heat-scroll">
+        <div class="heat-matrix" id="spreadMatrix"></div>
+      </div>
+      <p class="foot-note">Open trades are not profit until expiry + spot check. Click a row to open that strategy.</p>
+    </section>
+
+    <section class="cmd-view" id="view-calibration" data-view-panel="calibration">
+      <header class="panel-head">
+        <div>
+          <h2>Edge calibration</h2>
+          <p>Predicted spread vs realized P&amp;L · settled trades only</p>
+        </div>
+        <label class="field-label">Strategy
+          <select id="calibrationStrategy" class="field-select">
+            <option value="ensemble">All strategies</option>
+          </select>
+        </label>
+      </header>
+      <div id="calibrationPanel"><div class="empty">Waiting for settled trades…</div></div>
+      <p class="foot-note">Sparse samples (n&lt;5) are directional only.</p>
+    </section>
+
+    <section class="cmd-view" id="view-allocator" data-view-panel="allocator">
+      <header class="panel-head">
+        <div>
+          <h2>Venue bankroll split</h2>
+          <p>Recommended deposits from observed leg capital demand</p>
+        </div>
+        <label class="field-label">Model
+          <select id="allocatorStrategy" class="field-select">
+            <option value="ensemble">All strategies combined</option>
+          </select>
+        </label>
+      </header>
+      <div id="venueAllocator"><div class="empty">Waiting for trade data…</div></div>
+    </section>
+
+    <section class="cmd-view" id="view-bots" data-view-panel="bots">
+      <header class="panel-head">
+        <div>
+          <h2>Strategy detail</h2>
+          <p>Full ledger · sizing model · risk · trade history</p>
+        </div>
+        <div class="panel-controls">
+          <input type="search" id="botSearch" class="field-search" placeholder="Filter…" autocomplete="off" />
+          <select id="botSort" class="field-select">
+            <option value="pnl">P&amp;L</option>
+            <option value="equity">Equity</option>
+            <option value="open">Open</option>
+            <option value="name">Name</option>
+          </select>
+        </div>
+      </header>
+      <div class="bot-stack" id="botList"></div>
+    </section>
+
+  </main>
+</div>
+<script src="/header.js"></script>
+<script>window.AppHeader?.mount('#appHeader');</script>
+<script src="/bot-ledger.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const BL = window.BotLedger;
+const esc = BL.esc;
+const money = BL.money;
+const pnlFmt = BL.pnlFmt;
+const fmtDur = BL.fmtDur;
+
+let bots = [];
+let openBook = [];
+let ensembleFunnel = null;
+let spreadMetric = 'contracts';
+let heatmapMode = 'spread';
+let spreadBuckets = [];
+let expiryBuckets = [];
+let coinKeys = [];
+let botSearch = '';
+let botSort = 'pnl';
+let overlayMode = 'top';
+let allocatorStrategy = 'ensemble';
+let calibrationStrategy = 'ensemble';
+let ensembleAllocation = null;
+let compareIds = new Set();
+let activeView = (location.hash || '').replace(/^#/, '').startsWith('bot-') || (location.hash || '').replace(/^#/, '') === 'bots'
+  ? 'bots'
+  : (['spread', 'allocator', 'compare', 'calibration'].includes((location.hash || '').replace(/^#/, ''))
+      ? (location.hash || '').replace(/^#/, '') : 'leaderboard');
+const hashId = (location.hash || '').replace(/^#/, '').replace(/^bot-/, '');
+const expanded = new Set(hashId && !['spread', 'allocator', 'bots', 'leaderboard', 'compare', 'calibration'].includes(hashId) ? [hashId] : []);
+const loaded = new Map();
+const ledgerState = new Map();
+const botTabState = new Map();
+
+const OVERLAY_COLORS = [
+  '#0f172a','#2563eb','#059669','#d97706','#dc2626','#7c3aed','#0891b2','#db2777',
+  '#65a30d','#ea580c','#4f46e5','#0d9488','#ca8a04','#e11d48','#0284c7','#9333ea',
+  '#16a34a','#f59e0b','#64748b','#1d4ed8','#be123c','#115e59',
+];
+const VLABEL = {cryptocom:'crypto.com', kalshi:'Kalshi', polymarket:'Polymarket'};
+
+async function fetchJson(url, opts) {
+  const r = await fetch(url, opts);
+  return r.json();
+}
+async function post(url) { return fetchJson(url, { method: 'POST' }); }
+function pnlClass(v) { return v >= 0 ? 'up' : 'down'; }
+function pctOrDash(value, digits = 1) {
+  return value == null || Number.isNaN(Number(value)) ? '—' : Number(value).toFixed(digits) + '%';
+}
+
+function setView(view) {
+  activeView = view;
+  document.querySelectorAll('.cmd-nav button').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.view === view);
+  });
+  document.querySelectorAll('[data-view-panel]').forEach(panel => {
+    panel.classList.toggle('active', panel.dataset.viewPanel === view);
+  });
+  if (view === 'bots' && !$('#botList').children.length && bots.length) {
+    renderBotList(sortedFilteredBots());
+  }
+  if (view !== 'bots' && !hashId) history.replaceState(null, '', '#' + view);
+}
+
+function renderSummary(summary) {
+  const pnl = Number(summary.total_pnl || 0);
+  const pending = Number(summary.pending_pnl || 0);
+  $('#summaryCards').innerHTML =
+    kpi('Equity', money(summary.total_equity), '') +
+    kpi('Confirmed P&amp;L', pnlFmt(pnl), pnlClass(pnl)) +
+    kpi('Running', (summary.running || 0) + ' / ' + (summary.bot_count || 0), 'live') +
+    kpi('Settled', String(summary.settled_trades || 0), '') +
+    kpi('Open', String(summary.open_trades || 0), '') +
+    kpi('Pending', pnlFmt(pending), pnlClass(pending));
+}
+function kpi(label, value, cls) {
+  return '<div class="kpi-chip"><span>' + label + '</span><b class="' + cls + '">' + value + '</b></div>';
+}
+
+function renderVenueAllocator(allocation, rows) {
+  ensembleAllocation = allocation;
+  const selector = $('#allocatorStrategy');
+  const wanted = ['ensemble', ...rows.map(row => row.id)];
+  if ([...selector.options].map(o => o.value).join('|') !== wanted.join('|')) {
+    selector.innerHTML = '<option value="ensemble">All strategies combined</option>' +
+      rows.map(row => '<option value="' + esc(row.id) + '">' + esc(row.label) + '</option>').join('');
+  }
+  selector.value = allocatorStrategy;
+  const selectedBot = allocatorStrategy === 'ensemble' ? null : rows.find(r => r.id === allocatorStrategy);
+  const model = selectedBot?.venue_allocation || allocation;
+  if (!model?.venues?.length) {
+    $('#venueAllocator').innerHTML = '<div class="empty">No venue demand observed yet.</div>';
+    return;
+  }
+  const palette = {cryptocom:'#2563eb', kalshi:'#10b981', polymarket:'#8b5cf6'};
+  const bars = model.venues.map(v =>
+    '<span style="width:' + v.recommended_pct + '%;background:' + palette[v.venue] + '"></span>').join('');
+  const cards = model.venues.map(v => {
+    const flow = Number(v.settlement_cash_flow || 0);
+    return '<article class="alloc-card ' + esc(v.venue) + '">' +
+      '<div class="alloc-top"><span class="alloc-dot" style="background:' + palette[v.venue] + '"></span>' +
+      '<b>' + esc(v.label) + '</b><strong>' + Number(v.recommended_pct).toFixed(1) + '%</strong></div>' +
+      '<div class="alloc-amt">' + money(v.per_1000) + '<small>/ $1k</small></div>' +
+      '<dl><div><dt>Open</dt><dd>' + money(v.open_committed) + '</dd></div>' +
+      '<div><dt>Observed</dt><dd>' + money(v.historical_notional) + '</dd></div>' +
+      '<div><dt>Flow</dt><dd class="' + pnlClass(flow) + '">' + pnlFmt(flow) + '</dd></div>' +
+      '<div><dt>Legs</dt><dd>' + v.legs + '</dd></div></dl></article>';
+  }).join('');
+  const name = selectedBot ? selectedBot.label : 'All strategies';
+  $('#venueAllocator').innerHTML =
+    '<div class="alloc-head"><div><h3>' + esc(name) + '</h3><p>' + esc(model.method) + '</p></div>' +
+    '<div class="alloc-conf"><span>Confidence</span><b>' + Number(model.confidence_pct || 0).toFixed(0) + '%</b>' +
+    '<small>' + model.sample_legs + ' legs</small></div></div>' +
+    '<div class="alloc-bar">' + bars + '</div>' +
+    '<div class="alloc-grid">' + cards + '</div>' +
+    '<p class="foot-note"><b>Usage:</b> multiply each % by your bankroll. Recalculate after settlements — payouts return to the winning venue.</p>';
+}
+
+function heatmapBuckets() {
+  if (heatmapMode === 'expiry') return expiryBuckets;
+  if (heatmapMode === 'coin') return coinKeys.map(id => ({id, label: id}));
+  return spreadBuckets;
+}
+function heatmapStatsKey() {
+  if (heatmapMode === 'expiry') return 'expiry_stats';
+  if (heatmapMode === 'coin') return 'coin_stats';
+  return 'spread_stats';
+}
+function updateHeatmapChrome() {
+  const t = {spread:'Spread deployment', coin:'Coin deployment', expiry:'Expiry deployment'};
+  const c = {
+    spread:'Capital by entry spread width',
+    coin:'Capital by underlying (BTC, ETH, …)',
+    expiry:'Time-to-expiry at entry',
+  };
+  const n = {
+    spread:'Spread = $1 − YES cost − NO cost',
+    coin:'Columns = coins with ≥1 trade',
+    expiry:'TTE buckets when entry_ts exists',
+  };
+  const title = $('#heatmapTitle'), copy = $('#heatmapCopy'), note = $('#heatmapLegendNote');
+  if (title) title.textContent = t[heatmapMode] || t.spread;
+  if (copy) copy.textContent = c[heatmapMode] || c.spread;
+  if (note) note.textContent = n[heatmapMode] || n.spread;
+}
+function renderHeatmap(rows) {
+  updateHeatmapChrome();
+  const buckets = heatmapBuckets();
+  const statsKey = heatmapStatsKey();
+  if (!buckets?.length) {
+    $('#spreadMatrix').innerHTML = '<div class="empty">No ' + esc(heatmapMode) + ' data yet.</div>';
+    return;
+  }
+  const sorted = [...rows].sort((a, b) => Number(b.pnl || 0) - Number(a.pnl || 0));
+  const values = sorted.flatMap(row => buckets.map(b => Math.abs(Number(row[statsKey]?.[b.id]?.[spreadMetric] || 0))));
+  const max = Math.max(1, ...values);
+  const colCount = buckets.length;
+  $('#spreadMatrix').style.setProperty('--heat-cols', String(colCount));
+  const dim = heatmapMode === 'spread' ? 'entry spread' : (heatmapMode === 'coin' ? 'coin' : 'TTE');
+  const header = '<div class="heat-h heat-dyn"><div>Strategy</div>' +
+    buckets.map(b => '<div><b>' + esc(b.label) + '</b><small>' + dim + '</small></div>').join('') +
+    '<div>Total</div></div>';
+  const body = sorted.map(row => {
+    const cells = buckets.map(bucket => {
+      const cell = row[statsKey]?.[bucket.id] || {};
+      const raw = Number(cell[spreadMetric] || 0);
+      const intensity = raw ? Math.max(.12, Math.abs(raw) / max) : 0;
+      const tone = !raw ? 'empty' : (spreadMetric === 'pnl' ? (raw < 0 ? 'loss' : 'profit') : 'volume');
+      let value, sub;
+      if (!raw && !cell.trades) { value = '—'; sub = ''; }
+      else if (spreadMetric === 'pnl') {
+        value = cell.trades ? pnlFmt(raw) : '—';
+        sub = cell.trades ? cell.settled + ' settled' : '';
+      } else if (spreadMetric === 'contracts') {
+        value = cell.contracts ? cell.contracts + '×' : '—';
+        sub = cell.trades ? cell.trades + ' tr' : '';
+      } else {
+        value = cell.trades || '—';
+        sub = cell.trades ? cell.contracts + '×' : '';
+      }
+      return '<div class="heat-cell ' + tone + '" style="--heat:' + intensity.toFixed(3) + '"><b>' + value + '</b>' +
+        (sub ? '<small>' + esc(sub) + '</small>' : '') + '</div>';
+    }).join('');
+    return '<button class="heat-r heat-dyn" data-jump="' + esc(row.id) + '">' +
+      '<div class="heat-name"><b>' + esc(row.label) + '</b><small>Avg ' +
+      (row.avg_spread_cents == null ? '—' : row.avg_spread_cents.toFixed(2) + '¢') + '</small></div>' +
+      cells + '<div class="heat-total ' + pnlClass(row.pnl) + '"><b>' + pnlFmt(row.pnl) +
+      '</b><small>' + row.open_count + 'o · ' + row.settled_count + 's</small></div></button>';
+  }).join('');
+  $('#spreadMatrix').innerHTML = header + body;
+  $('#spreadMatrix').querySelectorAll('[data-jump]').forEach(bindJump);
+}
+
+function skipReasonLabel(reason) {
+  const map = {rank_filtered:'Rank filtered', missing_costs:'Missing costs', not_verified:'Not verified',
+    already_open:'Already open', expired:'Expired', strike_gap:'Strike gap', below_min_edge:'Below min edge',
+    strategy_filter:'Strategy filter', size_zero:'Size zero', insufficient_cash:'Insufficient cash', max_positions:'Max positions'};
+  return map[reason] || reason.replace(/_/g, ' ');
+}
+
+function renderFunnel(funnel) {
+  const root = $('#funnelPanel'), sum = $('#funnelSum');
+  if (!root || !sum) return;
+  ensembleFunnel = funnel;
+  if (!funnel || !(funnel.scans || funnel.scanned)) {
+    sum.textContent = '—';
+    root.innerHTML = '<div class="empty">Awaiting scan data.</div>';
+    return;
+  }
+  const stages = [['Scanned', funnel.scanned], ['Eligible', funnel.eligible], ['Taken', funnel.taken], ['Skipped', funnel.skipped]];
+  const max = Math.max(1, ...stages.map(s => Number(s[1] || 0)));
+  const reasons = Object.entries(funnel.skip_reasons || {}).slice(0, 6);
+  sum.innerHTML = (funnel.scans || 0) + ' scans · <b>' + (funnel.take_rate_pct == null ? '—' : funnel.take_rate_pct + '%') + '</b> take';
+  const idle = !funnel.scanned
+    ? '<p class="foot-note">Scans are running, but the shared scanner currently returns 0 live opportunities.</p>'
+    : '';
+  root.innerHTML =
+    '<div class="funnel-bars">' + stages.map(([label, val]) =>
+      '<div class="funnel-bar"><span>' + esc(label) + '</span><b>' + Number(val || 0).toLocaleString() + '</b>' +
+      '<i style="width:' + (Number(val || 0) / max * 100).toFixed(1) + '%"></i></div>'
+    ).join('') + '</div>' +
+    (reasons.length ? '<div class="skip-tags">' + reasons.map(([r, n]) =>
+      '<span>' + esc(skipReasonLabel(r)) + ' <b>' + n + '</b></span>').join('') + '</div>' : '') + idle;
+}
+
+function ensureCompareSelection(rows) {
+  const valid = new Set(rows.map(r => r.id));
+  compareIds = new Set([...compareIds].filter(id => valid.has(id)));
+  if (compareIds.size < 2) {
+    const ranked = [...rows].sort((a, b) => Number(b.equity || 0) - Number(a.equity || 0));
+    compareIds = new Set(ranked.slice(0, Math.min(3, ranked.length)).map(r => r.id));
+  }
+}
+
+function renderComparePicker(rows) {
+  const root = $('#comparePicker'), note = $('#comparePickNote');
+  if (!root) return;
+  ensureCompareSelection(rows);
+  root.innerHTML = [...rows].sort((a, b) => Number(b.pnl || 0) - Number(a.pnl || 0)).map(row => {
+    const on = compareIds.has(row.id);
+    return '<button type="button" class="pick-chip' + (on ? ' on' : '') + '" data-compare-id="' + esc(row.id) + '">' +
+      esc(row.label) + ' <b class="' + pnlClass(row.pnl) + '">' + pnlFmt(row.pnl) + '</b></button>';
+  }).join('');
+  if (note) {
+    note.textContent = compareIds.size + ' selected';
+    note.classList.toggle('warn', compareIds.size < 2 || compareIds.size > 3);
+  }
+  root.querySelectorAll('[data-compare-id]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.compareId;
+      if (compareIds.has(id)) { if (compareIds.size > 2) compareIds.delete(id); }
+      else { if (compareIds.size >= 3) compareIds.delete([...compareIds][0]); compareIds.add(id); }
+      renderComparePicker(bots); renderCompareGrid(bots);
+    });
+  });
+}
+
+function ageLabel(seconds) {
+  return seconds == null ? '—' : fmtDur(seconds) + ' ago';
+}
+
+function renderCompareGrid(rows) {
+  const root = $('#compareGrid');
+  if (!root) return;
+  const selected = rows.filter(r => compareIds.has(r.id));
+  if (selected.length < 2) { root.innerHTML = '<div class="empty">Select at least 2 strategies.</div>'; return; }
+  root.innerHTML = selected.map(row => {
+    const sz = row.sizing || {}, fn = row.funnel || {}, reasons = Object.entries(fn.skip_reasons || {}).slice(0, 3);
+    return '<article class="cmp-card">' +
+      '<header><button type="button" data-jump="' + esc(row.id) + '" class="cmp-jump"><b>' + esc(row.label) +
+      '</b><small>' + esc(row.subtitle || '') + '</small></button><strong class="' + pnlClass(row.pnl) + '">' + pnlFmt(row.pnl) + '</strong></header>' +
+      '<div class="cmp-grid">' +
+        cmpCell('Equity', money(row.equity)) + cmpCell('Return', (row.return_pct != null ? row.return_pct + '%' : '—'), pnlClass(row.pnl)) +
+        cmpCell('Max DD', pctOrDash(row.max_drawdown_pct)) + cmpCell('Exposure', pctOrDash(row.open_exposure_pct)) +
+        cmpCell('σ', pctOrDash(row.return_std_pct, 2)) + cmpCell('Open/Set', (row.open_count||0)+'/'+(row.settled_count||0)) +
+      '</div>' +
+      '<div class="cmp-chips">' + paramChip('Edge', (sz.min_edge_cents == null ? '—' : sz.min_edge_cents + '¢')) +
+        paramChip('Bet', (sz.max_bet_pct == null ? '—' : sz.max_bet_pct + '%')) +
+        paramChip('Cap', (sz.max_exposure_pct == null ? '—' : sz.max_exposure_pct + '%')) + '</div>' +
+      '<div class="cmp-funnel">Scan ' + (fn.scanned||0) + ' · Elig ' + (fn.eligible||0) + ' · Take ' + (fn.taken||0) +
+        (reasons.length ? '<small>' + reasons.map(([r,n]) => skipReasonLabel(r)+' '+n).join(' · ') + '</small>' : '') + '</div>' +
+      '<div class="cmp-time">Entry <b>' + ageLabel(row.last_entry_age_s) + '</b> · Settle <b>' + ageLabel(row.last_settle_age_s) + '</b></div>' +
+    '</article>';
+  }).join('');
+  root.querySelectorAll('[data-jump]').forEach(bindJump);
+}
+function cmpCell(label, value, cls) {
+  return '<div><span>' + label + '</span><b class="' + (cls||'') + '">' + value + '</b></div>';
+}
+
+function aggregateCalibration(rows) {
+  const buckets = (spreadBuckets.length ? spreadBuckets : [
+    {id:'micro',label:'< 2¢'},{id:'small',label:'2–5¢'},{id:'medium',label:'5–10¢'},{id:'wide',label:'10¢+'}
+  ]).map(b => ({id:b.id, label:b.label, n:0, predicted_pnl:0, realized_pnl:0, wins:0,
+    avg_predicted:null, avg_realized:null, avg_error:null, win_rate:null}));
+  const byId = Object.fromEntries(buckets.map(b => [b.id, b]));
+  rows.forEach(row => {
+    ((row.calibration || {}).buckets || []).forEach(cell => {
+      const t = byId[cell.id]; if (!t) return;
+      t.n += Number(cell.n||0); t.predicted_pnl += Number(cell.predicted_pnl||0);
+      t.realized_pnl += Number(cell.realized_pnl||0); t.wins += Number(cell.wins||0);
+    });
+  });
+  buckets.forEach(c => {
+    if (c.n) {
+      c.avg_predicted = c.predicted_pnl/c.n; c.avg_realized = c.realized_pnl/c.n;
+      c.avg_error = c.avg_realized - c.avg_predicted; c.win_rate = c.wins/c.n*100;
+    }
+  });
+  const sample = buckets.reduce((s,b) => s+b.n, 0);
+  return {buckets, sample_size:sample, sparse: sample < 5};
+}
+
+function renderCalibration(rows) {
+  const root = $('#calibrationPanel'), sel = $('#calibrationStrategy');
+  if (!root || !sel) return;
+  const wanted = ['ensemble', ...rows.map(r => r.id)];
+  if ([...sel.options].map(o => o.value).join('|') !== wanted.join('|')) {
+    sel.innerHTML = '<option value="ensemble">All strategies</option>' +
+      rows.map(r => '<option value="' + esc(r.id) + '">' + esc(r.label) + '</option>').join('');
+  }
+  sel.value = calibrationStrategy;
+  const selected = calibrationStrategy === 'ensemble' ? null : rows.find(r => r.id === calibrationStrategy);
+  const model = selected ? (selected.calibration || aggregateCalibration([selected])) : aggregateCalibration(rows);
+  const sample = Number(model.sample_size || 0);
+  if (!sample) {
+    root.innerHTML = '<div class="cal-empty"><b>No settled trades</b><p>Calibration activates after confirmed outcomes.</p></div>';
+    return;
+  }
+  const note = model.sparse
+    ? '<div class="cal-warn">Sparse sample n=' + sample + ' — directional only</div>'
+    : '<div class="cal-ok">n=' + sample + ' settled pairs</div>';
+  const rowsHtml = (model.buckets || []).map(cell => {
+    const empty = !cell.n;
+    return '<div class="cal-r' + (empty ? ' dim' : '') + '">' +
+      '<div><b>' + esc(cell.label) + '</b><small>n=' + (cell.n||0) + '</small></div>' +
+      '<div>' + (empty ? '—' : pnlFmt(cell.avg_predicted)) + '</div>' +
+      '<div class="' + (empty ? '' : pnlClass(cell.avg_realized)) + '">' + (empty ? '—' : pnlFmt(cell.avg_realized)) + '</div>' +
+      '<div class="' + (empty ? '' : pnlClass(cell.avg_error)) + '">' + (empty ? '—' : pnlFmt(cell.avg_error)) + '</div>' +
+      '<div>' + (empty || cell.win_rate == null ? '—' : cell.win_rate.toFixed(1) + '%') + '</div>' +
+      '<div class="' + (empty ? '' : pnlClass(cell.realized_pnl)) + '">' + (empty ? '—' : pnlFmt(cell.realized_pnl)) + '</div></div>';
+  }).join('');
+  root.innerHTML = note + '<div class="cal-table"><div class="cal-h"><div>Bucket</div><div>Predicted</div><div>Realized</div><div>Error</div><div>Win%</div><div>Total</div></div>' + rowsHtml + '</div>';
+}
+
+function renderEquityOverlay(rows) {
+  const canvas = $('#equityOverlay'), legend = $('#equityOverlayLegend');
+  if (!canvas || !legend) return;
+  const ranked = [...rows].sort((a, b) => Number(b.equity || 0) - Number(a.equity || 0));
+  const series = (overlayMode === 'top' ? ranked.slice(0, 5) : ranked).map((row, i) => {
+    let curve = row.equity_curve || [];
+    if (curve.length === 1) curve = [{ts:Number(curve[0].ts)-60, equity:Number(curve[0].equity)}, curve[0]];
+    else if (!curve.length && row.equity != null) {
+      const now = Date.now()/1000;
+      curve = [{ts:now-60, equity:Number(row.equity)}, {ts:now, equity:Number(row.equity)}];
+    }
+    return {id:row.id, label:row.label, color:OVERLAY_COLORS[i%OVERLAY_COLORS.length], curve, equity:row.equity};
+  }).filter(s => s.curve.length >= 2);
+
+  if (!series.length) {
+    legend.innerHTML = '';
+    const ctx = canvas.getContext('2d'), dpr = window.devicePixelRatio||1;
+    const w = canvas.clientWidth||640, h = canvas.clientHeight||200;
+    canvas.width = w*dpr; canvas.height = h*dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
+    ctx.fillStyle = '#94a3b8'; ctx.font = '12px Inter,sans-serif';
+    ctx.fillText('Building equity history…', 14, 24);
+    return;
+  }
+  legend.innerHTML = series.map(s =>
+    '<button type="button" class="leg-item" data-jump="' + esc(s.id) + '"><i style="background:' + s.color + '"></i>' +
+    esc(s.label) + ' <b>' + money(s.equity) + '</b></button>').join('');
+  legend.querySelectorAll('[data-jump]').forEach(bindJump);
+
+  const ctx = canvas.getContext('2d'), dpr = window.devicePixelRatio||1;
+  const w = canvas.clientWidth||640, h = canvas.clientHeight||200;
+  canvas.width = w*dpr; canvas.height = h*dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
+  const allTs = series.flatMap(s => s.curve.map(p => Number(p.ts)));
+  const allEq = series.flatMap(s => s.curve.map(p => Number(p.equity)));
+  const tMin = Math.min(...allTs), tMax = Math.max(...allTs);
+  const eMin = Math.min(...allEq), eMax = Math.max(...allEq);
+  const pad = (eMax-eMin)*0.12||1, yMin = eMin-pad, yMax = eMax+pad;
+  const left = 42, right = 8, top = 8, bottom = 18;
+  const plotW = Math.max(1,w-left-right), plotH = Math.max(1,h-top-bottom);
+  const xOf = ts => left + ((ts-tMin)/Math.max(1e-9,tMax-tMin))*plotW;
+  const yOf = eq => top + (1-((eq-yMin)/Math.max(1e-9,yMax-yMin)))*plotH;
+  ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1;
+  for (let i = 0; i <= 3; i++) {
+    const y = top + plotH*i/3;
+    ctx.beginPath(); ctx.moveTo(left,y); ctx.lineTo(w-right,y); ctx.stroke();
+    ctx.fillStyle = '#94a3b8'; ctx.font = '10px ui-monospace,Menlo,monospace'; ctx.textAlign = 'right';
+    ctx.fillText(money(yMax-((yMax-yMin)*i)/3), left-4, y+3);
+  }
+  series.forEach(s => {
+    ctx.strokeStyle = s.color; ctx.lineWidth = 2; ctx.beginPath();
+    s.curve.forEach((p,i) => { const x=xOf(Number(p.ts)), y=yOf(Number(p.equity)); i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+    ctx.stroke();
+    const last = s.curve[s.curve.length-1];
+    ctx.fillStyle = s.color; ctx.beginPath();
+    ctx.arc(xOf(Number(last.ts)), yOf(Number(last.equity)), 3, 0, Math.PI*2); ctx.fill();
+  });
+}
+
+function renderOpenBook(entries) {
+  const root = $('#openBook'), sum = $('#openBookSum');
+  if (!root || !sum) return;
+  const pending = entries.reduce((a,r) => a+Number(r.locked_pnl||0), 0);
+  sum.innerHTML = entries.length + ' open · <b class="' + pnlClass(pending) + '">' + pnlFmt(pending) + '</b>';
+  if (!entries.length) { root.innerHTML = '<div class="empty">No open trades.</div>'; return; }
+  root.innerHTML =
+    '<div class="queue-h"><div>Expires</div><div>Strategy</div><div>Market</div><div>Size</div><div>Pending</div></div>' +
+    entries.map(row => {
+      const urgent = row.settlement_status === 'awaiting_price' || (row.settles_in_s != null && row.settles_in_s <= 120);
+      const settle = row.settlement_status === 'awaiting_price' ? '<em class="urgent">Awaiting</em>'
+        : (row.settles_in_s == null ? '—' : fmtDur(row.settles_in_s));
+      const market = esc(String(row.coin||'').toUpperCase()) + ' ' + (row.strike == null ? '' : BL.strk(row.strike));
+      return '<button type="button" class="queue-r' + (urgent ? ' urgent' : '') + '" data-jump="' + esc(row.bot_id) + '">' +
+        '<div>' + settle + '</div>' +
+        '<div><b>' + esc(row.label) + '</b><small>' + (row.spread_cents == null ? '' : row.spread_cents.toFixed(2)+'¢') + '</small></div>' +
+        '<div><b>' + market + '</b><small>' + esc(row.expiry||'') + '</small></div>' +
+        '<div>' + row.contracts + '× <small>' + money(row.cost_total) + '</small></div>' +
+        '<div class="' + pnlClass(row.locked_pnl) + '">' + pnlFmt(row.locked_pnl) + '</div></button>';
+    }).join('');
+  root.querySelectorAll('[data-jump]').forEach(bindJump);
+}
+
+function renderLeaderboard(rows) {
+  const sorted = [...rows].sort((a, b) => Number(b.pnl || 0) - Number(a.pnl || 0));
+  $('#leaderboard').innerHTML = sorted.map((b, i) => {
+    const medal = i < 3 ? ['🥇','🥈','🥉'][i] : (i+1);
+    const dd = b.max_drawdown_pct;
+    return '<div class="rank-r' + (expanded.has(b.id) ? ' on' : '') + '" data-jump="' + esc(b.id) + '">' +
+      '<div class="rank-n">' + medal + '</div>' +
+      '<div class="rank-name"><b>' + esc(b.label) + '</b><small>' + (b.open_count||0) + ' open</small></div>' +
+      '<div>' + money(b.equity) + '</div>' +
+      '<div class="pnl ' + pnlClass(b.pnl) + '">' + pnlFmt(b.pnl) + '</div>' +
+      '<div class="pnl ' + pnlClass(b.pnl) + '">' + (b.return_pct != null ? b.return_pct+'%' : '—') + '</div>' +
+      '<div class="' + (dd != null && dd >= 10 ? 'down' : '') + '">' + pctOrDash(dd) + '</div>' +
+      '<div>' + pctOrDash(b.open_exposure_pct) + '</div>' +
+      '<div>' + pctOrDash(b.open_concentration_pct) + '</div></div>';
+  }).join('');
+  $('#leaderboard').querySelectorAll('[data-jump]').forEach(bindJump);
+}
+
+function botIcon(b) { return b.type === 'crypto_arb' ? '₿' : (b.type === 'paper' ? '⇄' : '↗'); }
+
+function bindJump(row) {
+  row.addEventListener('click', () => {
+    const id = row.dataset.jump;
+    setView('bots');
+    history.replaceState(null, '', '#bot-' + id);
+    requestAnimationFrame(() => {
+      if (!document.getElementById('bot-' + id)) renderBotList(sortedFilteredBots());
+      if (!expanded.has(id)) toggleBot(id);
+      else document.getElementById('bot-' + id)?.scrollIntoView({behavior:'smooth', block:'start'});
+    });
+  });
+}
+
+function sortedFilteredBots() {
+  const q = botSearch.trim().toLowerCase();
+  let rows = bots.filter(b => !q || [b.label,b.subtitle,b.desc,b.group,b.id].some(v => String(v||'').toLowerCase().includes(q)));
+  return [...rows].sort((a,b) => {
+    if (botSort === 'equity') return Number(b.equity||0)-Number(a.equity||0);
+    if (botSort === 'open') return Number(b.open_count||0)-Number(a.open_count||0);
+    if (botSort === 'name') return String(a.label||'').localeCompare(String(b.label||''));
+    return Number(b.pnl||0)-Number(a.pnl||0);
+  });
+}
+
+function botShell(b, collapsed) {
+  const pnl = b.pnl || 0;
+  const st = b.running ? '<span class="bot-state on">' + (b.type === 'crypto_arb' ? 'On' : 'Run') + '</span>'
+    : '<span class="bot-state off">Off</span>';
+  return '<article class="bot-panel' + (collapsed ? ' collapsed' : '') + '" id="bot-' + esc(b.id) + '">' +
+    '<div class="bot-head" data-toggle="' + esc(b.id) + '">' +
+    '<span class="bot-avatar ' + esc(b.type) + '">' + botIcon(b) + '</span>' +
+    '<div class="bot-identity"><div><h2>' + esc(b.label) + '</h2>' + st + '</div><span class="bot-life">' + esc(b.subtitle || '') + '</span></div>' +
+    '<div class="bot-head-metric"><small>Equity</small><b>' + money(b.equity) + '</b></div>' +
+    '<div class="bot-head-metric"><small>Open</small><b>' + (b.open_count||0) + '</b></div>' +
+    '<div class="bot-head-metric"><small>Ret</small><b class="' + pnlClass(pnl) + '">' + (b.return_pct>=0?'+':'') + Number(b.return_pct||0).toFixed(2) + '%</b></div>' +
+    '<div class="bot-head-metric primary"><small>P&amp;L</small><b class="bot-head-pnl ' + pnlClass(pnl) + '">' + pnlFmt(pnl) + '</b></div>' +
+    '<span class="bot-disclosure">⌄</span></div>' +
+    '<div class="bot-body" id="body-' + esc(b.id) + '"><div class="empty">Loading…</div></div></article>';
+}
+
+function getBotTab(id) { return botTabState.get(id) || 'overview'; }
+function setBotTab(id, tab) {
+  botTabState.set(id, tab);
+  const body = document.getElementById('body-' + id);
+  if (!body) return;
+  body.querySelectorAll('[data-bot-tab]').forEach(btn => {
+    const on = btn.dataset.botTab === tab;
+    btn.classList.toggle('active', on);
+    btn.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  body.querySelectorAll('[data-bot-pane]').forEach(pane => {
+    const on = pane.dataset.botPane === tab;
+    pane.classList.toggle('active', on);
+    pane.hidden = !on;
+  });
+}
+function botDetailTabs(id, counts) {
+  const active = getBotTab(id);
+  const tabs = [['overview','Overview',null],['strategy','Model',null],['risk','Risk',null],['ledger','Ledger',counts?.trades]];
+  return '<div class="bot-detail-tabs" role="tablist">' + tabs.map(([k,l,c]) =>
+    '<button type="button" role="tab" data-bot-tab="' + k + '" aria-selected="' + (active===k?'true':'false') + '" class="' + (active===k?'active':'') + '">' +
+    esc(l) + (c != null ? '<span class="tab-count">' + c + '</span>' : '') + '</button>').join('') + '</div>';
+}
+
+function renderCryptoArb(b, d) {
+  const stratId = d.strategy || d.config?.strategy || 'half_kelly';
+  const stratName = BL.strategyLabel(stratId, d.strategies);
+  const bustTxt = d.busts ? ' · <span class="bad">' + d.busts + ' bust' + (d.busts===1?'':'s') + '</span>' : '';
+  const state = ledgerState.get(b.id) || {filter:'all', sort:'expiry'};
+  ledgerState.set(b.id, state);
+  const config = d.config || {}, spec = (d.strategies||{})[stratId] || {}, risk = d.risk_metrics || {};
+  const riskScore = Number(spec.risk_score||0);
+  const sampleText = risk.sample_size > 1 ? risk.sample_size + ' settled' : 'n=' + (risk.sample_size||0);
+  const pct = v => v == null ? '—' : Number(v).toFixed(2)+'%';
+  const varText = risk.return_variance == null ? '—' : Number(risk.return_variance).toExponential(3);
+  const active = getBotTab(b.id), tradeCount = (d.trades||[]).length;
+
+  const overview =
+    '<div class="bot-pane' + (active==='overview'?' active':'') + '" data-bot-pane="overview"' + (active==='overview'?'':' hidden') + '>' +
+    '<div class="bot-note"><b>Paper only.</b> Pending until expiry + spot check. <a href="/cryptoarbitrage">Scanner →</a></div>' +
+    '<div class="bot-grid">' +
+    cell('Equity', money(d.equity)) + cell('Cash', money(d.cash)) + cell('Deployed', money(d.deployed)) +
+    cell('Pending', money(d.locked_pending)) + cell('P&amp;L', money(d.confirmed_pnl), pnlClass(d.confirmed_pnl)) +
+    cell('Injected', money(d.total_injected), 'sm') +
+    cell('Open/Set', (d.open_count||0)+'/'+(d.settled_count||0)+(d.wins?' ('+d.wins+'W)':''), 'sm') +
+    cell('Busts', String(d.busts||0), d.busts?'bad':'') + '</div>' +
+    '<div class="trade-breakdown">' +
+    breakdownItem('Avg spread', b.avg_spread_cents==null?'—':b.avg_spread_cents.toFixed(2)+'¢', 'At entry') +
+    breakdownItem('Win rate', d.settled_count?Math.round((d.wins||0)/d.settled_count*100)+'%':'—', (d.wins||0)+'W') +
+    breakdownItem('Avg settled', d.settled_count?pnlFmt((d.confirmed_pnl||0)/d.settled_count):'—', 'Per pair', pnlClass(d.confirmed_pnl)) +
+    breakdownItem('Pending', pnlFmt(d.locked_pending||0), (d.open_count||0)+' open') +
+    breakdownItem('Return', (d.confirmed_return_pct>=0?'+':'')+Number(d.confirmed_return_pct||0).toFixed(2)+'%', money(d.total_injected), pnlClass(d.confirmed_return_pct)) +
+    '</div><div class="bot-spark"><canvas class="eq-spark" height="48"></canvas></div></div>';
+
+  const strategy =
+    '<div class="bot-pane' + (active==='strategy'?' active':'') + '" data-bot-pane="strategy"' + (active==='strategy'?'':' hidden') + '>' +
+    '<section class="strategy-analysis"><div class="strategy-analysis-head"><div><span class="strategy-profile-label">Model</span><h3>' + esc(stratName) + '</h3><p>' + esc(spec.desc||b.desc||'') + '</p></div>' +
+    '<div class="risk-badge risk-' + (riskScore>=8?'extreme':riskScore>=6?'high':riskScore>=4?'medium':'low') + '"><span>Risk</span><b>' + esc(spec.risk||'—') + '</b><small>' + riskScore + '/10</small></div></div>' +
+    '<div class="strategy-params">' + paramChip('Family', spec.family||'—') + paramChip('Min edge', (Number(config.min_edge||0)*100).toFixed(2)+'¢') +
+    paramChip('Max bet', Math.round(Number(config.max_bet_pct||0)*100)+'%') + paramChip('Exposure', Math.round(Number(config.max_exposure_pct||0)*100)+'%') +
+    paramChip('Positions', config.max_positions||0) + paramChip('ΔK', '0 required') + '</div>' +
+    '<div class="strategy-technical-grid">' + technicalCard('Equation', spec.formula||'—') + technicalCard('Spread response', spec.spread_response||'—') +
+    technicalCard('Variance', spec.variance||'—') + technicalCard('Failure mode', spec.failure_mode||'—', 'warning') + '</div>' +
+    '<div class="ev-model"><div><span class="strategy-profile-label">EV model</span><h4>Strike geometry</h4></div>' +
+    '<div class="ev-equations"><code>e = 1 − C<sub>YES</sub> − C<sub>NO</sub> − F</code><code>ΔK = K<sub>YES</sub> − K<sub>NO</sub></code></div>' +
+    '<p>Gross contractual EV per pair — not a guarantee against partial fills, fees, or venue default.</p></div></section></div>';
+
+  const riskPane =
+    '<div class="bot-pane' + (active==='risk'?' active':'') + '" data-bot-pane="risk"' + (active==='risk'?'':' hidden') + '>' +
+    '<div class="empirical-risk standalone"><div class="empirical-risk-head"><div><span class="strategy-profile-label">Diagnostics</span><h4>Empirical risk</h4></div><small>' + esc(sampleText) + '</small></div>' +
+    '<div class="risk-metric-grid">' + riskMetric('Variance', varText, 'Settled P&L/cost') + riskMetric('σ', pct(risk.return_std_pct), 'Std dev') +
+    riskMetric('Downside', pct(risk.downside_deviation_pct), 'RMS negative') + riskMetric('Max DD', pct(risk.max_drawdown_pct), 'Peak-trough') +
+    riskMetric('Exposure', pct(risk.open_exposure_pct), 'Deployed/equity') + riskMetric('Concentration', pct(risk.open_concentration_pct), 'Largest open') +
+    '</div></div></div>';
+
+  const ledger =
+    '<div class="bot-pane' + (active==='ledger'?' active':'') + '" data-bot-pane="ledger"' + (active==='ledger'?'':' hidden') + '>' +
+    '<div class="tl-wrap" data-ledger="' + esc(b.id) + '"><div class="tl-head"><h3>Ledger</h3>' +
+    '<div class="tl-tabs"><button type="button" class="tl-tab active" data-filter="all">All</button><button type="button" class="tl-tab" data-filter="open">Open</button><button type="button" class="tl-tab" data-filter="settled">Settled</button></div>' +
+    '<select class="tl-sort"><option value="expiry">Expiry</option><option value="locked">Locked</option><option value="realized">Realized</option></select>' +
+    '<div class="tl-sum"></div></div><div class="tl-list"></div></div></div>';
+
+  const body = document.getElementById('body-' + b.id);
+  body.innerHTML = botDetailTabs(b.id, {trades:tradeCount}) + overview + strategy + riskPane + ledger;
+  const lifeEl = body.closest('.bot-panel').querySelector('.bot-life');
+  if (lifeEl) lifeEl.innerHTML = 'Life #' + d.life + ' · $' + (d.starting_balance||50) + ' · <b>' + esc(stratName) + '</b>' + bustTxt;
+  body.querySelectorAll('[data-bot-tab]').forEach(btn => btn.addEventListener('click', e => { e.stopPropagation(); setBotTab(b.id, btn.dataset.botTab); }));
+  const ledgerRoot = body.querySelector('[data-ledger]');
+  ledgerRoot.querySelectorAll('.tl-tab').forEach(tab => tab.addEventListener('click', () => { state.filter = tab.dataset.filter||'all'; BL.renderTradeLedger(ledgerRoot, d.trades||[], d, state); }));
+  ledgerRoot.querySelector('.tl-sort').addEventListener('change', e => { state.sort = e.target.value; BL.renderTradeLedger(ledgerRoot, d.trades||[], d, state); });
+  BL.renderTradeLedger(ledgerRoot, d.trades||[], d, state);
+  BL.drawSparkline(body.querySelector('.eq-spark'), d.equity_curve||[]);
+}
+
+function renderTestbot(b, d) {
+  const usd = c => '$' + (c/100).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+  const pnl = (d.total_pnl_cents||0)/100;
+  const body = document.getElementById('body-' + b.id);
+  const cfg = d.config||{}, logs = d.trade_log||[];
+  const sells = logs.filter(e => e.kind==='sell'), wins = sells.filter(e => Number(e.pnl||0)>0);
+  const losses = sells.filter(e => Number(e.pnl||0)<0), realized = sells.reduce((s,e)=>s+Number(e.pnl||0),0);
+  const avgTrade = sells.length ? realized/sells.length : 0;
+  const cfgTxt = 'vol≥$'+Math.round((cfg.min_volume||0)/1000)+'k · tp='+Math.round((cfg.take_profit_pct||0)*100)+'%';
+  const active = getBotTab(b.id);
+  const posRows = (d.positions||[]).map(p => '<tr><td>'+esc(p.title||p.ticker)+'</td><td>'+p.count+'×</td><td>'+usd(p.entry_cents)+'</td><td>'+usd(p.current_cents)+'</td><td class="'+pnlClass(p.pnl_cents/100)+'">'+pnlFmt(p.pnl_cents/100)+'</td></tr>').join('') || '<tr><td colspan="5" class="empty">None</td></tr>';
+  const logRows = logs.slice(0,40).map(e => {
+    const tradePnl = Number(e.pnl||0)/100;
+    return '<div class="execution-row '+(e.kind==='sell'?pnlClass(tradePnl):'open')+'"><span class="execution-kind">'+String(e.kind||'').toUpperCase()+'</span>' +
+      '<span class="execution-market"><b>'+esc(e.title||e.ticker)+'</b></span><span class="execution-pnl '+pnlClass(tradePnl)+'">'+(e.kind==='sell'?pnlFmt(tradePnl):'Open')+'</span></div>';
+  }).join('');
+  body.innerHTML = botDetailTabs(b.id,{trades:logs.length}) +
+    '<div class="bot-pane'+(active==='overview'?' active':'')+'" data-bot-pane="overview"'+(active==='overview'?'':' hidden')+'>' +
+    '<div class="bot-note">'+esc(b.desc||'')+(b.lever ? ' · Lever: <b>'+esc(b.lever)+'</b>' : '')+'</div>' +
+    '<div class="bot-grid">'+cell('Equity',usd(d.equity_cents||0))+cell('Cash',usd(d.cash_cents||0))+
+    cell('P&amp;L',pnlFmt(pnl),pnlClass(pnl))+cell('Positions',String(d.positions_count||0),'sm')+'</div>' +
+    '<div class="trade-breakdown">'+
+      breakdownItem('Closed', sells.length, 'Round trips') +
+      breakdownItem('Win rate', sells.length?Math.round(wins.length/sells.length*100)+'%':'—', wins.length+'W · '+losses.length+'L') +
+      breakdownItem('Avg trade', pnlFmt(avgTrade/100), 'Per close', pnlClass(avgTrade)) +
+      breakdownItem('Realized', pnlFmt(realized/100), 'Closed total', pnlClass(realized)) +
+    '</div>' +
+    (b.control_apis ? '<div class="bot-actions"><button class="bot-btn act ctrl-start">▶ Start</button><button class="bot-btn ctrl-stop">■ Stop</button><button class="bot-btn ctrl-reset">Reset</button></div>' : '') +
+    '</div>' +
+    '<div class="bot-pane'+(active==='strategy'?' active':'')+'" data-bot-pane="strategy"'+(active==='strategy'?'':' hidden')+'>' +
+    '<div class="bot-note">Config: '+esc(cfgTxt)+'</div>' +
+    '<div class="tl-wrap"><table class="tb-pos-table"><thead><tr><th>Market</th><th>Size</th><th>Entry</th><th>Mark</th><th>P&amp;L</th></tr></thead><tbody>'+posRows+'</tbody></table></div></div>' +
+    '<div class="bot-pane'+(active==='risk'?' active':'')+'" data-bot-pane="risk"'+(active==='risk'?'':' hidden')+'><div class="empty">No separate risk diagnostics for this bot type.</div></div>' +
+    '<div class="bot-pane'+(active==='ledger'?' active':'')+'" data-bot-pane="ledger"'+(active==='ledger'?'':' hidden')+'><div class="tb-log">'+(logRows||'<div class="empty">None</div>')+'</div></div>';
+  body.querySelectorAll('[data-bot-tab]').forEach(btn => btn.addEventListener('click', e => { e.stopPropagation(); setBotTab(b.id, btn.dataset.botTab); }));
+  if (b.control_apis) {
+    body.querySelector('.ctrl-start')?.addEventListener('click', async () => { await post(b.control_apis.start); await loadBotBody(b); await refresh(); });
+    body.querySelector('.ctrl-stop')?.addEventListener('click', async () => { await post(b.control_apis.stop); await loadBotBody(b); await refresh(); });
+    body.querySelector('.ctrl-reset')?.addEventListener('click', async () => {
+      if (!confirm('Reset ' + b.label + '?')) return;
+      await post(b.control_apis.reset); await loadBotBody(b); await refresh();
+    });
+  }
+}
+
+function renderPaper(b, d) {
+  const usd = c => '$'+(c/100).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+  const body = document.getElementById('body-' + b.id);
+  const pnl = (d.pnl_cents||0)/100, trades = d.trades||[], active = getBotTab(b.id);
+  const tradeRows = trades.slice(0,30).map(t => '<div class="tb-log-row"><b>'+esc(t.outcome||t.side||'ARB')+'</b> '+esc(t.title||'')+'</div>').join('');
+  body.innerHTML = botDetailTabs(b.id,{trades:trades.length}) +
+    '<div class="bot-pane'+(active==='overview'?' active':'')+'" data-bot-pane="overview"'+(active==='overview'?'':' hidden')+'>' +
+    '<div class="bot-note">'+esc(b.desc||'')+'</div>' +
+    '<div class="bot-grid">'+cell('Equity',usd(d.balance_cents||0))+cell('P&amp;L',pnlFmt(pnl),pnlClass(pnl))+
+    cell('Trades',String(d.trade_count||0),'sm')+cell('Executed',String(d.stats?.trades_executed||0),'sm')+'</div>' +
+    '<div class="trade-breakdown">'+
+      breakdownItem('Executed', d.stats?.trades_executed||0, 'Orders completed') +
+      breakdownItem('Skipped', d.stats?.trades_skipped||0, 'Failed entry checks') +
+      breakdownItem('Failed', d.stats?.trades_failed||0, 'Execution failures', (d.stats?.trades_failed||0)?'down':'') +
+      breakdownItem('Return', (b.return_pct>=0?'+':'')+Number(b.return_pct||0).toFixed(3)+'%', 'Paper accounts', pnlClass(b.return_pct||0)) +
+    '</div>' +
+    (b.control_apis ? '<div class="bot-actions"><button class="bot-btn act ctrl-start">▶ Start</button><button class="bot-btn ctrl-stop">■ Stop</button><button class="bot-btn ctrl-reset">Reset</button></div>' : '') +
+    '</div>' +
+    '<div class="bot-pane'+(active==='strategy'?' active':'')+'" data-bot-pane="strategy"'+(active==='strategy'?'':' hidden')+'><div class="empty">No sizing-model detail for this bot type.</div></div>' +
+    '<div class="bot-pane'+(active==='risk'?' active':'')+'" data-bot-pane="risk"'+(active==='risk'?'':' hidden')+'><div class="empty">No separate risk diagnostics for this bot type.</div></div>' +
+    '<div class="bot-pane'+(active==='ledger'?' active':'')+'" data-bot-pane="ledger"'+(active==='ledger'?'':' hidden')+'><div class="tb-log">'+(tradeRows||'<div class="empty">None</div>')+'</div></div>';
+  body.querySelectorAll('[data-bot-tab]').forEach(btn => btn.addEventListener('click', e => { e.stopPropagation(); setBotTab(b.id, btn.dataset.botTab); }));
+  if (b.control_apis) {
+    body.querySelector('.ctrl-start')?.addEventListener('click', async () => { await post(b.control_apis.start); await loadBotBody(b); await refresh(); });
+    body.querySelector('.ctrl-stop')?.addEventListener('click', async () => { await post(b.control_apis.stop); await loadBotBody(b); await refresh(); });
+    body.querySelector('.ctrl-reset')?.addEventListener('click', async () => {
+      if (!confirm('Reset ' + b.label + '?')) return;
+      await post(b.control_apis.reset); await loadBotBody(b); await refresh();
+    });
+  }
+}
+
+function cell(k,v,cls) { return '<div class="bot-cell"><div class="k">'+k+'</div><div class="v'+(cls?' '+cls:'')+'">'+v+'</div></div>'; }
+function paramChip(l,v) { return '<span class="param-chip"><small>'+esc(l)+'</small><b>'+esc(String(v))+'</b></span>'; }
+function technicalCard(l,t,cls) { return '<article class="technical-card '+(cls||'')+'"><span>'+esc(l)+'</span><p>'+esc(t)+'</p></article>'; }
+function riskMetric(l,v,s) { return '<div class="risk-metric"><span>'+esc(l)+'</span><b>'+esc(String(v))+'</b><small>'+esc(s)+'</small></div>'; }
+function breakdownItem(l,v,s,cls) { return '<div class="breakdown-item"><span>'+esc(l)+'</span><b class="'+(cls||'')+'">'+v+'</b><small>'+esc(s||'')+'</small></div>'; }
+
+async function loadBotBody(b) {
+  const d = await fetchJson(b.api, {cache:'no-store'});
+  loaded.set(b.id, d);
+  if (b.type === 'crypto_arb') renderCryptoArb(b, d);
+  else if (b.type === 'testbot') renderTestbot(b, d);
+  else renderPaper(b, d);
+}
+
+function toggleBot(id) {
+  const panel = document.getElementById('bot-' + id);
+  if (!panel) return;
+  if (panel.classList.contains('collapsed')) {
+    expanded.add(id); panel.classList.remove('collapsed');
+    if (!loaded.has(id)) loadBotBody(bots.find(b => b.id === id));
+    else {
+      const b = bots.find(x => x.id === id), d = loaded.get(id);
+      if (b.type === 'crypto_arb') renderCryptoArb(b, d);
+      else if (b.type === 'testbot') renderTestbot(b, d);
+      else renderPaper(b, d);
+    }
+    requestAnimationFrame(() => panel.scrollIntoView({behavior:'smooth', block:'start'}));
+  } else { expanded.delete(id); panel.classList.add('collapsed'); }
+  renderLeaderboard(bots);
+}
+
+function renderBotList(rows) {
+  if (!rows.length) { $('#botList').innerHTML = '<div class="empty">No match.</div>'; return; }
+  $('#botList').innerHTML = rows.map(b => botShell(b, !expanded.has(b.id))).join('');
+  rows.forEach(b => { if (expanded.has(b.id)) loadBotBody(b); });
+  document.querySelectorAll('[data-toggle]').forEach(el => el.addEventListener('click', e => { e.stopPropagation(); toggleBot(el.dataset.toggle); }));
+}
+
+async function refreshExpanded() {
+  for (const id of expanded) {
+    const b = bots.find(x => x.id === id);
+    if (!b) continue;
+    try {
+      const d = await fetchJson(b.api, {cache:'no-store'});
+      loaded.set(id, d);
+      if (b.type === 'crypto_arb') {
+        const ledgerRoot = document.querySelector('#body-'+id+' [data-ledger]');
+        if (ledgerRoot) {
+          BL.renderTradeLedger(ledgerRoot, d.trades||[], d, ledgerState.get(id)||{filter:'all',sort:'expiry'});
+          BL.drawSparkline(document.querySelector('#body-'+id+' .eq-spark'), d.equity_curve||[]);
+          const headPnl = document.querySelector('#bot-'+id+' .bot-head-pnl');
+          if (headPnl) { headPnl.textContent = pnlFmt(d.confirmed_pnl); headPnl.className = 'bot-head-pnl '+pnlClass(d.confirmed_pnl); }
+        } else renderCryptoArb(b, d);
+      }
+    } catch (e) {}
+  }
+}
+
+async function refresh() {
+  try {
+    const data = await fetchJson('/api/bots/comparison', {cache:'no-store'});
+    bots = data.bots || [];
+    openBook = data.open_book || [];
+    spreadBuckets = data.spread_buckets || [];
+    expiryBuckets = data.expiry_buckets || [];
+    coinKeys = data.coin_keys || [];
+    renderSummary(data.summary || {});
+    renderVenueAllocator(data.venue_allocation || {}, bots);
+    renderHeatmap(bots);
+    renderEquityOverlay(bots);
+    renderOpenBook(openBook);
+    renderLeaderboard(bots);
+    renderFunnel(data.funnel || {});
+    renderComparePicker(bots);
+    renderCompareGrid(bots);
+    renderCalibration(bots);
+    if (activeView === 'bots') {
+      if (!$('#botList').children.length || $('#botList').querySelector('.empty')) renderBotList(sortedFilteredBots());
+      else {
+        const visible = new Set(sortedFilteredBots().map(b => b.id));
+        bots.forEach(b => {
+          const panel = document.getElementById('bot-'+b.id);
+          if (!panel) return;
+          panel.style.display = visible.has(b.id) ? '' : 'none';
+          const headPnl = panel.querySelector('.bot-head-pnl');
+          if (headPnl) { headPnl.textContent = pnlFmt(b.pnl); headPnl.className = 'bot-head-pnl '+pnlClass(b.pnl); }
+        });
+      }
+    }
+    await refreshExpanded();
+    $('#timestamp').textContent = new Date().toLocaleTimeString();
+  } catch (e) { console.error(e); }
+}
+
+$('#spreadMetricSwitch').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-spread-metric]');
+  if (!btn) return;
+  spreadMetric = btn.dataset.spreadMetric;
+  $('#spreadMetricSwitch').querySelectorAll('button').forEach(b => b.classList.toggle('active', b===btn));
+  renderHeatmap(bots);
+});
+$('#heatmapModeSwitch')?.addEventListener('click', e => {
+  const btn = e.target.closest('button[data-heatmap-mode]');
+  if (!btn) return;
+  heatmapMode = btn.dataset.heatmapMode;
+  $('#heatmapModeSwitch').querySelectorAll('button').forEach(b => b.classList.toggle('active', b===btn));
+  renderHeatmap(bots);
+});
+$('#overlayControls')?.addEventListener('click', e => {
+  const btn = e.target.closest('button[data-overlay-mode]');
+  if (!btn) return;
+  overlayMode = btn.dataset.overlayMode;
+  $('#overlayControls').querySelectorAll('button').forEach(b => b.classList.toggle('active', b===btn));
+  renderEquityOverlay(bots);
+});
+window.addEventListener('resize', () => { if (bots.length) renderEquityOverlay(bots); });
+$('#viewTabs').addEventListener('click', e => { const btn = e.target.closest('button[data-view]'); if (btn) setView(btn.dataset.view); });
+$('#allocatorStrategy').addEventListener('change', e => { allocatorStrategy = e.target.value; renderVenueAllocator(ensembleAllocation||{}, bots); });
+$('#calibrationStrategy')?.addEventListener('change', e => { calibrationStrategy = e.target.value; renderCalibration(bots); });
+$('#botSearch')?.addEventListener('input', e => { botSearch = e.target.value||''; renderBotList(sortedFilteredBots()); });
+$('#botSort')?.addEventListener('change', e => { botSort = e.target.value||'pnl'; renderBotList(sortedFilteredBots()); });
+
+if (hashId && !['spread','bots','leaderboard','allocator','compare','calibration'].includes(hashId)) {
+  activeView = 'bots'; expanded.add(hashId); botTabState.set(hashId, 'ledger');
+}
+setView(activeView);
+async function pollLoop() { await refresh(); setTimeout(pollLoop, 8000); }
+pollLoop();
+</script>
+</body>
+</html>

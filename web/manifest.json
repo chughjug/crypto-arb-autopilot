@@ -1,0 +1,23 @@
+{
+  "name": "Future360",
+  "short_name": "Future360",
+  "description": "Live arbitrage, movers, and prediction markets across Kalshi & Polymarket.",
+  "start_url": "/arbitrage",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f4f6fb",
+  "theme_color": "#0f172a",
+  "lang": "en",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Arbitrage",  "url": "/arbitrage",     "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Markets",    "url": "/explore",        "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Watchlist",  "url": "/watchlist",      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Sports",     "url": "/sports",         "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
+  ],
+  "screenshots": [],
+  "categories": ["finance", "news"]
+}

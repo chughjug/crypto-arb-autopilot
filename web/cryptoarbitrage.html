@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="manifest" href="/manifest.json" />
+<meta name="theme-color" content="#0f172a" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Crypto Arbitrage · Future360</title>
+<meta name="description" content="Live cross-venue arbitrage on short-term crypto threshold markets — crypto.com Predict vs Kalshi vs Polymarket, matched by expiry and strike, polled every 2s." />
+<link rel="stylesheet" href="/theme.css" />
+<script src="/viewmode.js"></script>
+<style>
+.ca-hero { padding: 24px 0 4px; }
+.ca-hero h1 { margin: 0 0 6px; font-size: 26px; font-weight: 900; letter-spacing: -.6px; }
+.ca-hero p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.55; max-width: 680px; }
+.ca-live { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--muted-2); margin-left: 10px; }
+.ca-dot { width: 8px; height: 8px; border-radius: 50%; background: #16a34a; box-shadow: 0 0 0 0 rgba(22,163,74,.5); animation: capulse 1.4s infinite; }
+@keyframes capulse { 0%{box-shadow:0 0 0 0 rgba(22,163,74,.5)} 70%{box-shadow:0 0 0 7px rgba(22,163,74,0)} 100%{box-shadow:0 0 0 0 rgba(22,163,74,0)} }
+
+.ca-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: 12px; margin: 18px 0; }
+.ca-stat { border: 1px solid var(--border); border-radius: 13px; padding: 14px 16px; background: var(--surface); }
+.ca-stat .lbl { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: var(--muted-2); }
+.ca-stat .val { font-size: 28px; font-weight: 900; letter-spacing: -1px; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.ca-stat .val.good { color: #16a34a; }
+.ca-stat .sub { font-size: 11px; color: var(--muted-2); margin-top: 2px; }
+
+.ca-section-h { font-size: 15px; font-weight: 800; margin: 22px 0 10px; display: flex; align-items: center; gap: 8px; }
+.ca-badge { font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
+
+.ca-opps { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); gap: 12px; }
+.ca-opp { border: 1px solid #16a34a55; border-radius: 13px; padding: 14px; background: linear-gradient(160deg, #16a34a12, transparent); }
+.ca-opp .top { display: flex; justify-content: space-between; align-items: baseline; }
+.ca-opp .coin { font-size: 14px; font-weight: 800; }
+.ca-opp .edge { font-size: 22px; font-weight: 900; color: #16a34a; font-variant-numeric: tabular-nums; }
+.ca-opp .strike { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.ca-opp .legs { font-size: 12px; margin-top: 8px; line-height: 1.5; }
+.ca-opp .legs b { color: var(--ink); }
+
+.ca-empty { border: 1px dashed var(--border-strong); border-radius: 13px; padding: 20px; text-align: center; color: var(--muted); font-size: 13px; }
+
+.ca-table { border: 1px solid var(--border); border-radius: 13px; overflow-x: auto; }
+.ca-grid { min-width: 840px; }
+.ca-head, .ca-row { display: grid; grid-template-columns: 56px 1.1fr 1.5fr 130px 1fr 1fr 80px 72px; align-items: center; }
+.ca-head { background: var(--surface-2); border-bottom: 1px solid var(--border-strong); }
+.ca-col { padding: 9px 12px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; color: var(--muted-2); }
+.ca-col.r, .ca-cell.r { text-align: right; }
+.ca-row { border-bottom: 1px solid var(--border); }
+.ca-row:last-child { border-bottom: none; }
+.ca-row.hot { background: #16a34a10; }
+.ca-cell { padding: 10px 12px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.ca-cell.muted { color: var(--muted-2); }
+.ca-coin { font-weight: 800; }
+.ca-noq { color: var(--muted-2); font-style: italic; font-size: 11px; }
+.ca-arb.pos { color: #16a34a; font-weight: 800; }
+.ca-note { font-size: 12px; color: var(--muted-2); margin: 10px 2px; line-height: 1.5; }
+.ca-cov { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px,1fr)); gap: 10px; }
+.ca-covcard { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; background: var(--surface); }
+.ca-covcard .cc-coin { font-weight: 800; font-size: 14px; margin-bottom: 8px; }
+.ca-covrow { display: flex; gap: 6px; margin: 5px 0; font-size: 11px; align-items: baseline; flex-wrap: wrap; }
+.ca-covrow .cc-src { color: var(--muted-2); font-weight: 800; min-width: 78px; flex-shrink: 0; text-transform: uppercase; letter-spacing: .3px; }
+.ca-error { display: none; border: 1px solid #dc262655; border-radius: 12px; padding: 10px 14px; margin: 12px 0 0; background: #dc262610; color: #dc2626; font-size: 13px; font-weight: 700; }
+.ca-error.show { display: block; }
+.ca-filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 0 0 12px; }
+.ca-filters label { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .3px; color: var(--muted-2); display: flex; align-items: center; gap: 6px; }
+.ca-filters select, .ca-filters input[type=checkbox] { font: inherit; }
+.ca-filters select { font-size: 13px; padding: 6px 8px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); color: var(--ink); }
+.ca-gap-note { font-size: 11px; color: var(--muted-2); margin-left: 4px; }
+.bot-btn.ok { background: #16a34a1a; border-color: #16a34a55; color: #16a34a; }
+.bot-cfg .cfg-hint { font-size: 9px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--muted-2); max-width: 90px; line-height: 1.3; }
+.bot-toggle { margin-left: auto; font: inherit; font-size: 12px; font-weight: 800; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--muted); cursor: pointer; }
+.bot-panel.collapsed .bot-body { display: none; }
+.ca-pill { font-size: 11px; padding: 2px 7px; border-radius: 999px; background: var(--surface-2); color: var(--muted); font-variant-numeric: tabular-nums; }
+.ca-pill.hit { background: #16a34a1f; color: #16a34a; font-weight: 700; }
+.ca-formula { border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; margin: 4px 0 4px; background: var(--surface-2); display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; }
+.ca-formula .ca-fx-label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: var(--muted-2); }
+.ca-formula code { font-size: 14px; font-weight: 700; color: var(--ink); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.ca-formula .ca-fx-note { font-size: 12px; color: var(--muted); }
+.ca-vbadge { font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 6px; margin-right: 3px; letter-spacing: .2px; }
+.ca-vbadge.cryptocom { background: #1f6feb22; color: #3b82f6; }
+.ca-vbadge.kalshi { background: #16a34a22; color: #16a34a; }
+.ca-vbadge.polymarket { background: #8b5cf622; color: #8b5cf6; }
+.ca-leg-v { font-weight: 800; }
+.ca-leg-v.cryptocom, .v-cost.cryptocom { color: #3b82f6; }
+.ca-leg-v.kalshi, .v-cost.kalshi { color: #16a34a; }
+.ca-leg-v.polymarket, .v-cost.polymarket { color: #8b5cf6; }
+
+/* sticky summary */
+.ca-sticky { position: sticky; top: 0; z-index: 50; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 10px 14px; margin: 0 0 14px; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(10px); border: 1px solid var(--border); border-radius: 12px; font-size: 11px; font-variant-numeric: tabular-nums; }
+.ca-sticky .sk { color: var(--muted-2); font-weight: 800; text-transform: uppercase; letter-spacing: .35px; font-size: 9px; }
+.ca-sticky .sv { font-weight: 900; margin-left: 4px; }
+.ca-sticky .sv.good { color: #16a34a; }
+.ca-sticky .sep { color: var(--border-strong); }
+
+/* collapsible formula */
+.ca-formula-wrap { margin: 4px 0 10px; }
+.ca-formula-toggle { font: inherit; font-size: 12px; font-weight: 700; color: var(--muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; width: 100%; text-align: left; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+.ca-formula-toggle code { font-size: 12px; color: var(--ink); flex: 1; }
+.ca-formula-wrap.open .ca-formula { display: flex; margin-top: 6px; }
+.ca-formula-wrap:not(.open) .ca-formula { display: none; }
+
+/* opportunity cards */
+.ca-opp { cursor: pointer; transition: box-shadow .15s; position: relative; }
+.ca-opp:hover { box-shadow: 0 4px 14px rgba(0,0,0,.06); }
+.ca-opp.has-bot::after { content: "BOT ENTERED"; position: absolute; top: 8px; right: 8px; font-size: 8px; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: #2563eb1a; color: #2563eb; }
+.ca-opp-break { font-size: 12px; margin-top: 8px; padding: 8px 10px; background: var(--surface); border-radius: 8px; border: 1px solid var(--border); line-height: 1.5; }
+.ca-opp-break .lock-line { font-weight: 800; color: #16a34a; margin-top: 4px; }
+.ca-opp-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.ca-opp-btn { font: inherit; font-size: 10px; font-weight: 800; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border-strong); background: var(--surface); cursor: pointer; }
+.ca-opp-btn:hover { background: var(--surface-2); }
+.ca-countdown { display: inline-flex; align-items: center; gap: 6px; }
+.ca-ring { width: 22px; height: 22px; transform: rotate(-90deg); }
+.ca-ring circle { fill: none; stroke-width: 3; }
+.ca-ring .bg { stroke: var(--border); }
+.ca-ring .fg { stroke: #16a34a; stroke-linecap: round; transition: stroke .3s; }
+.ca-ring.urgent .fg { stroke: #f59e0b; }
+.ca-ring.critical .fg { stroke: #dc2626; }
+
+/* matched — arb path + mobile cards */
+.ca-arb-path { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; font-size: 11px; margin-top: 4px; }
+.ca-arb-path .arrow { color: var(--muted-2); font-weight: 800; }
+.ca-mkt-cards { display: none; flex-direction: column; gap: 10px; }
+.ca-mkt-card { border: 1px solid var(--border); border-radius: 12px; padding: 12px; background: var(--surface); }
+.ca-mkt-card.hot { border-color: #16a34a55; background: #16a34a08; }
+.ca-mkt-card .mc-top { display: flex; justify-content: space-between; font-weight: 800; }
+.ca-mkt-card .mc-row { font-size: 11px; color: var(--muted-2); margin-top: 6px; line-height: 1.45; }
+
+/* toast */
+.ca-toast-wrap { position: fixed; bottom: 20px; right: 20px; z-index: 200; display: flex; flex-direction: column; gap: 8px; max-width: 320px; }
+.ca-toast { padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); box-shadow: 0 8px 24px rgba(0,0,0,.12); font-size: 12px; font-weight: 700; animation: toastin .25s ease; }
+.ca-toast.good { border-color: #16a34a55; }
+@keyframes toastin { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* bot drawer + sparkline */
+.bot-cfg-drawer { border-top: 1px solid var(--border); }
+.bot-cfg-toggle { font: inherit; font-size: 12px; font-weight: 800; padding: 10px 16px; width: 100%; text-align: left; background: var(--surface-2); border: none; cursor: pointer; color: var(--muted); }
+.bot-cfg-drawer .bot-cfg { display: none; border-top: none; }
+.bot-cfg-drawer.open .bot-cfg { display: flex; }
+.bot-presets { display: flex; gap: 6px; padding: 10px 16px 0; flex-wrap: wrap; }
+.bot-strategy { padding: 10px 16px 4px; display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--border); }
+.bot-strategy label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .3px; color: var(--muted-2); display: flex; flex-direction: column; gap: 4px; }
+.bot-strategy select { font: inherit; font-size: 13px; padding: 8px 10px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); color: var(--ink); max-width: 100%; }
+.strategy-desc { margin: 0; font-size: 11px; line-height: 1.45; color: var(--muted); }
+.tl-strategy { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: var(--surface-2); color: var(--muted); margin-left: 4px; }
+.bot-preset { font: inherit; font-size: 10px; font-weight: 800; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--border-strong); background: var(--surface); cursor: pointer; }
+.bot-preset.active { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.bot-spark { padding: 8px 16px 0; }
+.bot-spark canvas { width: 100%; height: 48px; display: block; border-radius: 8px; background: var(--surface-2); }
+.tl-card.highlight { box-shadow: 0 0 0 2px #2563eb88; }
+.tl-card.event { border-color: #f59e0b55; }
+.tl-sort { font: inherit; font-size: 11px; padding: 5px 8px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--surface); }
+.tl-pair-outcomes { padding: 8px 12px; font-size: 11px; background: var(--surface-2); border-top: 1px solid var(--border); line-height: 1.5; }
+.tl-pair-outcomes .locked { color: #16a34a; font-weight: 800; }
+.ca-covcard.major { border-color: #16a34a33; }
+.ca-empty-icon { font-size: 28px; margin-bottom: 6px; opacity: .5; }
+.ca-notify-btn { font: inherit; font-size: 10px; font-weight: 800; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; margin-left: 8px; }
+.ca-notify-btn.on { background: #16a34a1a; border-color: #16a34a55; color: #16a34a; }
+
+@media (max-width: 760px) {
+  .ca-table { display: none; }
+  .ca-mkt-cards { display: flex; }
+  .ca-sticky { font-size: 10px; gap: 6px 10px; }
+}
+
+/* ── always-on paper arb bot ─────────────────────────────── */
+.bot-panel { border: 1px solid var(--border); border-radius: 14px; background: var(--surface); margin: 8px 0; overflow: hidden; }
+.bot-head { display: flex; align-items: center; gap: 12px; padding: 13px 16px; border-bottom: 1px solid var(--border); background: var(--surface-2); flex-wrap: wrap; }
+.bot-head h2 { margin: 0; font-size: 16px; font-weight: 900; letter-spacing: -.3px; display: flex; align-items: center; gap: 9px; }
+.bot-state { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; padding: 3px 9px; border-radius: 999px; }
+.bot-state.on { background: #16a34a1f; color: #16a34a; animation: capulse 1.4s infinite; }
+.bot-life { font-size: 11px; font-weight: 700; color: var(--muted); margin-left: auto; font-variant-numeric: tabular-nums; }
+.bot-life .bust-count { color: #dc2626; font-weight: 800; }
+.bot-btn { font: inherit; font-size: 13px; font-weight: 800; padding: 7px 16px; border-radius: 9px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--ink); cursor: pointer; }
+.bot-btn:hover { background: var(--surface-2); }
+.bot-note { padding: 9px 16px; font-size: 11.5px; color: var(--muted-2); line-height: 1.5; border-bottom: 1px solid var(--border); }
+.bot-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px,1fr)); gap: 1px; background: var(--border); }
+.bot-cell { background: var(--surface); padding: 12px 16px; }
+.bot-cell .k { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; color: var(--muted-2); }
+.bot-cell .v { font-size: 21px; font-weight: 900; letter-spacing: -.6px; margin-top: 3px; font-variant-numeric: tabular-nums; }
+.bot-cell .v.good { color: #16a34a; } .bot-cell .v.bad { color: #dc2626; }
+.bot-cell .v.sm { font-size: 16px; }
+.bot-cfg { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; padding: 12px 16px; border-top: 1px solid var(--border); }
+.bot-cfg label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .3px; color: var(--muted-2); display: flex; flex-direction: column; gap: 4px; }
+.bot-cfg input { font: inherit; font-size: 13px; width: 80px; padding: 6px 8px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); color: var(--ink); font-variant-numeric: tabular-nums; }
+.bot-cfg .cfg-hint { font-size: 9px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--muted-2); max-width: 90px; line-height: 1.3; }
+.bot-toggle { margin-left: auto; font: inherit; font-size: 12px; font-weight: 800; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--muted); cursor: pointer; }
+.bot-panel.collapsed .bot-body { display: none; }
+.pv-link { color: inherit; text-decoration: none; font-weight: 800; border-bottom: 1px dotted currentColor; display: inline-block; }
+.pv-link:hover { opacity: 0.8; border-bottom-style: solid; }
+.tl-wrap { border-top: 1px solid var(--border); padding: 14px 16px; }
+.tl-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.tl-head h3 { margin: 0; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; color: var(--muted-2); }
+.tl-tabs { display: flex; gap: 6px; }
+.tl-tab { font: inherit; font-size: 11px; font-weight: 800; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--muted); cursor: pointer; }
+.tl-tab.active { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.tl-sum { margin-left: auto; font-size: 11px; color: var(--muted-2); font-variant-numeric: tabular-nums; }
+.tl-sum b { color: var(--ink); }
+.tl-list { display: flex; flex-direction: column; gap: 10px; max-height: 720px; overflow-y: auto; }
+.tl-card { border: 1px solid var(--border); border-radius: 12px; background: var(--surface); overflow: hidden; }
+.tl-card.open { border-color: #2563eb44; }
+.tl-card.settled { background: var(--surface-2); }
+.tl-card-h { display: flex; align-items: baseline; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.tl-card-h .tl-coin { font-size: 13px; font-weight: 900; }
+.tl-card-h .tl-meta { font-size: 11px; color: var(--muted-2); flex: 1; min-width: 140px; }
+.tl-badge { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; padding: 2px 7px; border-radius: 999px; }
+.tl-badge.open { background: #2563eb1a; color: #2563eb; }
+.tl-badge.settled { background: var(--surface); color: var(--muted); border: 1px solid var(--border); }
+.tl-pnl { font-size: 14px; font-weight: 900; font-variant-numeric: tabular-nums; margin-left: auto; }
+.tl-pnl.good { color: #16a34a; } .tl-pnl.bad { color: #dc2626; } .tl-pnl.lock { color: #16a34a; }
+.tl-table { width: 100%; border-collapse: collapse; font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.tl-table th { text-align: left; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .35px; color: var(--muted-2); padding: 7px 10px; background: var(--surface-2); border-bottom: 1px solid var(--border); }
+.tl-table th.r { text-align: right; }
+.tl-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.tl-table tr:last-child td { border-bottom: none; }
+.tl-table td.r { text-align: right; }
+.tl-side { font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 4px; display: inline-block; }
+.tl-side.yes { background: #16a34a1a; color: #16a34a; }
+.tl-side.no { background: #dc26261a; color: #dc2626; }
+.tl-venue { font-weight: 800; font-size: 10px; text-transform: uppercase; letter-spacing: .25px; }
+.tl-venue.cryptocom { color: #3b82f6; } .tl-venue.kalshi { color: #16a34a; } .tl-venue.polymarket { color: #8b5cf6; }
+.tl-result { font-size: 10px; font-weight: 700; }
+.tl-result.won { color: #16a34a; } .tl-result.lost { color: #dc2626; }
+.tl-result.proj { color: var(--muted-2); line-height: 1.35; }
+.tl-foot { padding: 8px 12px; font-size: 11px; color: var(--muted-2); border-top: 1px dashed var(--border); line-height: 1.45; }
+.tl-foot b { color: var(--ink); }
+.tl-events { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); }
+.tl-events .tl-ev { font-size: 11px; color: var(--muted-2); padding: 4px 0; border-bottom: 1px dashed var(--border); }
+.tl-empty { color: var(--muted-2); font-size: 12px; font-style: italic; padding: 12px 2px; }
+
+@media (max-width: 760px) {
+  .ca-stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+}
+
+@media (max-width: 580px) {
+  .ca-hero h1 { font-size: 21px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+  .ca-live { margin-left: 0; }
+  .ca-hero p { font-size: 12.5px; }
+  .ca-formula { padding: 10px 12px; gap: 4px; }
+  .ca-formula code { font-size: 12px; width: 100%; }
+  .ca-formula .ca-fx-note { font-size: 11px; }
+  
+  .bot-head { padding: 10px 12px; }
+  .bot-head h2 { font-size: 14.5px; }
+  .bot-life { margin-left: 0; width: 100%; margin-top: 4px; font-size: 10.5px; }
+  .bot-note { padding: 8px 12px; font-size: 10.5px; }
+  .bot-grid { grid-template-columns: repeat(2, 1fr); }
+  .bot-cell { padding: 8px 12px; }
+  .bot-cell .v { font-size: 17px; }
+  .bot-cell .v.sm { font-size: 14px; }
+  
+  .bot-cfg { padding: 10px 12px; gap: 8px; }
+  .bot-cfg label { font-size: 9px; }
+  .bot-cfg input { font-size: 12px; width: 70px; padding: 4px 6px; }
+
+  .tl-wrap { padding: 10px 12px; }
+  .tl-table { font-size: 10.5px; }
+  .tl-table th, .tl-table td { padding: 6px 8px; }
+  .tl-pnl { font-size: 12px; }
+  
+  .ca-stats { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .ca-stat { padding: 10px 12px; }
+  .ca-stat .val { font-size: 21px; }
+  .ca-stat .lbl { font-size: 9px; }
+  .ca-stat .sub { font-size: 10px; }
+  
+  .ca-table::after {
+    content: "Swipe ↔ to view full table";
+    display: block;
+    text-align: center;
+    padding: 6px;
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--muted-2);
+    background: var(--surface-2);
+    border-top: 1px solid var(--border);
+    text-transform: uppercase;
+    letter-spacing: .5px;
+  }
+}
+</style>
+</head>
+<body>
+<div id="appHeader"></div>
+<div class="page">
+
+  <div class="ca-hero">
+    <h1>⚡ Crypto Arbitrage <span class="ca-live"><span class="ca-dot"></span><span id="pollState">polling every 2s</span></span></h1>
+    <p>Short-term crypto threshold markets — matched across <b>crypto.com&nbsp;Predict</b>, <b>Kalshi</b>, and <b>Polymarket</b>. <a href="/bots">Paper bots &amp; trade ledgers →</a></p>
+  </div>
+
+  <div class="ca-error" id="apiError">Could not reach the arbitrage feed — retrying…</div>
+
+  <div class="ca-sticky" id="stickyBar">
+    <span><span class="sk">Live</span><span class="sv good" id="skLive">—</span></span>
+    <span class="sep">·</span>
+    <span><span class="sk">Best edge</span><span class="sv" id="skEdge">—</span></span>
+    <span class="sep">·</span>
+    <span><span class="sk">Venues</span><span class="sv" id="skVenues">—</span></span>
+    <span class="sep">·</span>
+    <span><span class="sk">Updated</span><span class="sv" id="skUpdated">—</span></span>
+    <span class="sep">·</span>
+    <span><span class="sk">Bot equity</span><a href="/bots" class="sv" id="skEquity" style="text-decoration:none;color:inherit">—</a></span>
+    <span class="sep">·</span>
+    <span><span class="sk">Life P&amp;L</span><a href="/bots" class="sv" id="skPnl" style="text-decoration:none;color:inherit">—</a></span>
+    <button type="button" class="ca-notify-btn" id="notifyBtn" title="Browser alerts for new arbs">Alerts off</button>
+  </div>
+
+  <div class="ca-formula-wrap" id="fxWrap">
+    <button type="button" class="ca-formula-toggle" id="fxToggle" aria-expanded="false">
+      <span>📐</span>
+      <code>edge = $1 − ( min YES + min NO )</code>
+      <span class="fx-hint" style="color:var(--muted-2);font-size:10px">show formula</span>
+    </button>
+    <div class="ca-formula">
+      <span class="ca-fx-label">General arbitrage formula</span>
+      <code id="fx">edge = $1 − ( min YES ask + min NO ask )</code>
+      <span class="ca-fx-note">across every venue quoting the same coin · expiry · strike — buy YES where cheapest, NO where cheapest; edge&nbsp;&gt;&nbsp;0 is a lock.</span>
+    </div>
+  </div>
+
+  <div class="ca-stats">
+    <div class="ca-stat"><div class="lbl">Live opportunities</div><div class="val good" id="stLive">—</div><div class="sub">2+ venues, edge &gt; 0</div></div>
+    <div class="ca-stat"><div class="lbl">Opportunities seen</div><div class="val" id="stCum">—</div><div class="sub">distinct, since page start</div></div>
+    <div class="ca-stat"><div class="lbl">Matched contracts</div><div class="val" id="stMatched">—</div><div class="sub">2+ venues · same strike</div></div>
+    <div class="ca-stat"><div class="lbl">Venues live</div><div class="val" id="stVenues">—</div><div class="sub" id="stVenuesSub">quoting now</div></div>
+    <div class="ca-stat"><div class="lbl">Best edge now</div><div class="val" id="stBest">—</div><div class="sub">max arb per $1</div></div>
+  </div>
+
+  <div class="ca-section-h">Live opportunities <span class="ca-badge" id="oppCount">0</span></div>
+  <div id="oppWrap"><div class="ca-empty">Waiting for a contract quoted on two venues with a combined cost under $1.00…</div></div>
+
+  <div class="ca-section-h">Matched contracts <span class="ca-badge" id="mktCount">0</span></div>
+  <div class="ca-table"><div class="ca-grid">
+    <div class="ca-head">
+      <div class="ca-col">Coin</div>
+      <div class="ca-col">Expiry (ET)</div>
+      <div class="ca-col">Strike per venue</div>
+      <div class="ca-col">Venues</div>
+      <div class="ca-col r">Cheapest YES</div>
+      <div class="ca-col r">Cheapest NO</div>
+      <div class="ca-col r">Max arb</div>
+      <div class="ca-col r">Expires</div>
+    </div>
+    <div id="mktRows"></div>
+  </div></div>
+  <div class="ca-mkt-cards" id="mktCards"></div>
+  <div class="ca-note" id="dataNote"></div>
+
+  <div class="ca-section-h">Expiry coverage <span class="ca-badge">why matches form or don't</span></div>
+  <p class="ca-note" style="margin-top:0">A locked arb needs the <b>same settlement time</b> on 2+ venues <b>and</b> strikes within ~0.005%. Green = a shared expiry (match candidate). If strikes still differ, see the gap % beside each shared time.</p>
+  <div class="ca-filters">
+    <label>Coin <select id="covCoin"><option value="">Major coins</option></select></label>
+    <label><input type="checkbox" id="covSharedOnly" checked /> Shared expiry only</label>
+    <label><input type="checkbox" id="covShowAll" /> Show all coins</label>
+  </div>
+  <div class="ca-cov" id="covWrap"></div>
+
+</div>
+<div class="ca-toast-wrap" id="toastWrap"></div>
+<script src="/header.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const POLL_MS = 2000;
+const MAJOR_COINS = new Set(['BTC','ETH','SOL','DOGE','XRP']);
+const fmtC = v => v==null ? '<span class="ca-noq">—</span>' : '$'+Number(v).toFixed(2);
+const fmtET = iso => {
+  if(!iso) return '—';
+  try { return new Date(iso).toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}); }
+  catch(e){ return iso; }
+};
+const fmtDur = s => { s=Math.max(0,Math.round(s)); const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;
+  return h?h+'h '+m+'m':(m?m+'m '+ss+'s':ss+'s'); };
+const esc = s => (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const tradeKey = (coin, expiry, strike) => coin+'|'+expiry+'|'+Number(strike).toFixed(4);
+
+const VLABEL = {cryptocom:'crypto.com', kalshi:'Kalshi', polymarket:'Polymarket'};
+const ccEventUrl = slug => slug ? 'https://web.crypto.com/explore/predict/events/' + encodeURIComponent(slug) : null;
+const venueLink = (v, pv, cls) => {
+  const c = cls ? ' '+cls : '';
+  if(!pv) return '<span class="v-cost'+c+' '+v+'">'+(VLABEL[v]||v)+'</span>';
+  if(v === 'polymarket' && pv.slug) {
+    return '<a href="https://polymarket.com/event/' + esc(pv.slug) + '" target="_blank" rel="noopener" class="pv-link v-cost'+c+' '+v+'">' + VLABEL[v] + ' ↗</a>';
+  }
+  if(v === 'kalshi' && pv.ticker) {
+    return '<a href="https://kalshi.com/markets/' + esc(pv.ticker.toLowerCase()) + '" target="_blank" rel="noopener" class="pv-link v-cost'+c+' '+v+'">' + VLABEL[v] + ' ↗</a>';
+  }
+  if(v === 'cryptocom' && pv.slug) {
+    return '<a href="' + ccEventUrl(pv.slug) + '" target="_blank" rel="noopener" class="pv-link v-cost'+c+' '+v+'">' + VLABEL[v] + ' ↗</a>';
+  }
+  return '<span class="v-cost'+c+' '+v+'">'+(VLABEL[v]||v)+'</span>';
+};
+const vbadge = (v, r) => {
+  const pv = (r && r.per_venue) ? r.per_venue[v] : null;
+  return '<span class="ca-vbadge '+v+'">'+venueLink(v, pv)+'</span>';
+};
+const strk = (v) => v>=100 ? '$'+Number(v).toLocaleString(undefined,{maximumFractionDigits:0})
+                           : '$'+Number(v).toLocaleString(undefined,{maximumFractionDigits:4});
+
+function countdownRing(secs, total){
+  if(secs==null) return '';
+  total = total || Math.max(secs, 300);
+  const pct = Math.max(0, Math.min(1, secs / total));
+  const circ = 2 * Math.PI * 9;
+  const off = circ * (1 - pct);
+  const cls = secs <= 30 ? ' critical' : (secs <= 120 ? ' urgent' : '');
+  return '<span class="ca-countdown"><svg class="ca-ring'+cls+'" viewBox="0 0 24 24"><circle class="bg" cx="12" cy="12" r="9"/><circle class="fg" cx="12" cy="12" r="9" stroke-dasharray="'+circ.toFixed(1)+'" stroke-dashoffset="'+off.toFixed(1)+'"/></svg><span>'+fmtDur(secs)+'</span></span>';
+}
+
+function oppBreakdown(r){
+  const yc = r.yes_cost, nc = r.no_cost;
+  if(yc==null||nc==null) return '';
+  const sum = yc+nc;
+  return '<div class="ca-opp-break"><span class="v-cost '+r.yes_venue+'">'+VLABEL[r.yes_venue]+' YES</span> $'+yc.toFixed(2)+
+    ' + <span class="v-cost '+r.no_venue+'">'+VLABEL[r.no_venue]+' NO</span> $'+nc.toFixed(2)+
+    ' = <b>$'+sum.toFixed(2)</b><div class="lock-line">→ lock $'+r.max_arb.toFixed(2)+' per contract</div></div>';
+}
+
+function copyText(txt, btn){
+  navigator.clipboard?.writeText(txt).then(()=>{
+    if(btn){ const o=btn.textContent; btn.textContent='Copied'; setTimeout(()=>btn.textContent=o,1200); }
+  }).catch(()=>{});
+}
+
+let lastCov = [], covCoinFilter = '', covSharedOnly = true, covShowAll = false;
+let lastArbData = null, lastBotMeta = {}, openTradeKeys = new Set();
+let seenOpps = new Set(), seenEnters = new Set(), alertsOn = false, tickTimer = null;
+
+function emptyReason(d){
+  const cov = d.coverage||[], mkts = d.markets||[];
+  const anyShared = cov.some(c => (c.shared||[]).length);
+  if(mkts.length) return null;
+  if(anyShared){
+    const best = cov.filter(c=>(c.shared||[]).length&&c.nearest_gap_pct!=null).sort((a,b)=>a.nearest_gap_pct-b.nearest_gap_pct)[0];
+    if(best) return 'Shared expiries exist but strikes are off — closest: <b>'+esc(best.coin)+'</b> at <b>'+best.nearest_gap_pct+'%</b> gap (need ~0.005%).';
+    return 'Venues share expiries but strikes haven\'t aligned closely enough.';
+  }
+  return 'No shared settlement time across venues right now — matches form on :00/:15/:30/:45 boundaries.';
+}
+
+function toast(msg, kind){
+  const el = document.createElement('div');
+  el.className = 'ca-toast'+(kind?' '+kind:'');
+  el.textContent = msg;
+  $('#toastWrap').appendChild(el);
+  setTimeout(()=>el.remove(), 4500);
+}
+
+function notify(msg){
+  toast(msg, 'good');
+  if(alertsOn && 'Notification' in window && Notification.permission==='granted'){
+    try { new Notification('Crypto Arb', { body: msg }); } catch(e){}
+  }
+}
+
+function updateSticky(st, opps, bot){
+  $('#skLive').textContent = st.live_opportunities ?? 0;
+  const best = opps.length ? opps[0].max_arb : 0;
+  const skEdge = $('#skEdge');
+  skEdge.textContent = best>0 ? '$'+best.toFixed(2) : '—';
+  skEdge.className = 'sv'+(best>0?' good':'');
+  $('#skVenues').textContent = (st.venues_live||[]).length;
+  $('#skUpdated').textContent = st.updated ? new Date(st.updated).toLocaleTimeString() : '—';
+  if(bot){
+    $('#skEquity').textContent = '$'+Number(bot.equity||0).toFixed(2);
+    const pnl = bot.lifetime_pnl||0;
+    const skPnl = $('#skPnl');
+    skPnl.textContent = (pnl>=0?'+':'')+'$'+Math.abs(pnl).toFixed(2);
+    skPnl.className = 'sv'+(pnl>0?' good':(pnl<0?' bad':''));
+  }
+}
+
+function scrollToTrade(){
+  window.location.href = '/bots#bot-crypto-arb';
+}
+
+function renderCoverage(cov){
+  lastCov = cov || [];
+  const coins = [...new Set(lastCov.map(c => c.coin))].sort();
+  const sel = $('#covCoin');
+  const cur = sel.value || covCoinFilter;
+  const listCoins = covShowAll ? coins : coins.filter(c => MAJOR_COINS.has(c));
+  sel.innerHTML = '<option value="">'+(covShowAll?'All coins':'Major coins')+'</option>' + listCoins.map(c => '<option value="'+esc(c)+'">'+esc(c)+'</option>').join('');
+  if(cur && [...sel.options].some(o => o.value === cur)) sel.value = cur;
+  covCoinFilter = sel.value;
+  covSharedOnly = $('#covSharedOnly').checked;
+  covShowAll = $('#covShowAll').checked;
+  let filtered = lastCov.filter(c => {
+    if(!covShowAll && !MAJOR_COINS.has(c.coin) && !covCoinFilter) return false;
+    if(covCoinFilter && c.coin !== covCoinFilter) return false;
+    if(covSharedOnly && !(c.shared||[]).length) return false;
+    return true;
+  });
+  filtered.sort((a,b)=>{
+    const as = (a.shared||[]).length, bs = (b.shared||[]).length;
+    if(as!==bs) return bs-as;
+    return a.coin.localeCompare(b.coin);
+  });
+  $('#covWrap').innerHTML = filtered.map(c=>{
+    const shared = new Set((c.shared||[]).map(x=>x.m));
+    const pills = arr => (arr && arr.length ? arr.map(x=>{
+      const hit = shared.has(x.m);
+      const gap = (c.shared||[]).find(s => s.m === x.m)?.gap_pct;
+      const gapTxt = hit && gap != null ? ' · '+gap+'% gap' : '';
+      return '<span class="ca-pill'+(hit?' hit':'')+'">'+esc(x.label)+gapTxt+'</span>';
+    }).join('') : '<span class="ca-pill">none</span>');
+    const vrows = Object.keys(c.venues||{}).map(v =>
+      '<div class="ca-covrow"><span class="cc-src">'+(VLABEL[v]||v)+'</span>'+pills(c.venues[v])+'</div>').join('');
+    const gapNote = c.nearest_gap_pct != null ? ' · nearest strike gap <b>'+c.nearest_gap_pct+'%</b>' : '';
+    return '<div class="ca-covcard'+(MAJOR_COINS.has(c.coin)?' major':'')+'"><div class="cc-coin">'+esc(c.coin)+(shared.size?' · <span style="color:#16a34a">'+shared.size+' shared</span>':'')+gapNote+'</div>'+vrows+'</div>';
+  }).join('') || '<div class="ca-empty"><div class="ca-empty-icon">🗓</div>No coverage matches filters — try disabling shared-only or show all coins.</div>';
+}
+
+function renderMktRow(r){
+  const pv = r.per_venue || {};
+  const pvStrikes = Object.keys(pv).map(v => '<span class="ca-vbadge '+v+'">'+venueLink(v, pv[v])+'</span> '+(pv[v].strike!=null?strk(pv[v].strike):'—')).join('<br>');
+  const path = r.yes_venue && r.no_venue
+    ? '<div class="ca-arb-path"><span class="v-cost '+r.yes_venue+'">'+VLABEL[r.yes_venue]+' YES $'+Number(r.yes_cost).toFixed(2)+'</span><span class="arrow">→</span><span class="v-cost '+r.no_venue+'">'+VLABEL[r.no_venue]+' NO $'+Number(r.no_cost).toFixed(2)+'</span></div>' : '';
+  const ring = countdownRing(r.expires_in_s, 300);
+  return '<div class="ca-row'+(r.max_arb>0?' hot':'')+'">'+
+    '<div class="ca-cell ca-coin">'+esc(r.coin)+'</div>'+
+    '<div class="ca-cell muted">'+fmtET(r.expiry)+'</div>'+
+    '<div class="ca-cell" style="line-height:1.5;font-size:12px">'+(pvStrikes||strk(r.strike))+path+'</div>'+
+    '<div class="ca-cell">'+(r.venues||[]).map(v => vbadge(v, r)).join('')+'</div>'+
+    '<div class="ca-cell r">'+(r.yes_cost!=null?'<span class="v-cost '+r.yes_venue+'">$'+r.yes_cost.toFixed(2)+'</span> <span class="ca-noq">'+VLABEL[r.yes_venue]+'</span>':fmtC(null))+'</div>'+
+    '<div class="ca-cell r">'+(r.no_cost!=null?'<span class="v-cost '+r.no_venue+'">$'+r.no_cost.toFixed(2)+'</span> <span class="ca-noq">'+VLABEL[r.no_venue]+'</span>':fmtC(null))+'</div>'+
+    '<div class="ca-cell r ca-arb'+(r.max_arb>0?' pos':'')+'">'+(r.max_arb>0?'$'+r.max_arb.toFixed(2):'—')+'</div>'+
+    '<div class="ca-cell r muted">'+ring+'</div></div>';
+}
+
+function renderMktCard(r){
+  const pv = r.per_venue || {};
+  const path = r.yes_venue && r.no_venue ? VLABEL[r.yes_venue]+' YES $'+r.yes_cost.toFixed(2)+' → '+VLABEL[r.no_venue]+' NO $'+r.no_cost.toFixed(2) : '';
+  return '<div class="ca-mkt-card'+(r.max_arb>0?' hot':'')+'"><div class="mc-top"><span>'+esc(r.coin)+' · '+strk(r.strike)+'</span><span class="ca-arb'+(r.max_arb>0?' pos':'')+'">'+(r.max_arb>0?'$'+r.max_arb.toFixed(2):'—')+'</span></div>'+
+    '<div class="mc-row">'+fmtET(r.expiry)+' · '+countdownRing(r.expires_in_s,300)+'</div>'+
+    '<div class="mc-row">'+path+'</div></div>';
+}
+
+function renderOpps(opps, d){
+  $('#oppCount').textContent = opps.length;
+  if(!opps.length){
+    const reason = emptyReason(d);
+    $('#oppWrap').innerHTML = '<div class="ca-empty"><div class="ca-empty-icon">🔍</div>'+reason+'</div>';
+    return;
+  }
+  $('#oppWrap').innerHTML = '<div class="ca-opps">'+opps.map(r=>{
+    const key = tradeKey(r.coin, r.expiry, r.strike);
+    const hasBot = openTradeKeys.has(key);
+    const pv = r.per_venue||{};
+    const copyLine = 'Buy YES on '+(VLABEL[r.yes_venue]||r.yes_venue)+' @ $'+r.yes_cost.toFixed(2)+' + NO on '+(VLABEL[r.no_venue]||r.no_venue)+' @ $'+r.no_cost.toFixed(2)+' = lock $'+r.max_arb.toFixed(2);
+    const total = (r.expires_in_s!=null && r.expires_in_s<=300) ? 300 : 900;
+    return '<div class="ca-opp'+(hasBot?' has-bot':'')+'" data-trade-key="'+esc(key)+'" role="button" tabindex="0">'+
+      '<div class="top"><span class="coin">'+esc(r.coin)+'</span><span class="edge">$'+r.max_arb.toFixed(2)+'</span></div>'+
+      '<div class="strike">&gt; '+strk(r.strike)+' · expires '+fmtET(r.expiry)+' '+countdownRing(r.expires_in_s,total)+'</div>'+
+      oppBreakdown(r)+
+      '<div class="ca-opp-actions">'+
+        '<button type="button" class="ca-opp-btn copy-trade">Copy trade</button>'+
+        (hasBot ? '<button type="button" class="ca-opp-btn goto-trade">View in ledger</button>' : '')+
+      '</div></div>';
+  }).join('')+'</div>';
+
+  // new opp alerts
+  opps.forEach(r=>{
+    const id = tradeKey(r.coin,r.expiry,r.strike)+'|'+r.max_arb;
+    if(!seenOpps.has(id)){ seenOpps.add(id); notify(r.coin+' arb $'+r.max_arb.toFixed(2)+' — '+VLABEL[r.yes_venue]+' YES + '+VLABEL[r.no_venue]+' NO'); }
+  });
+
+  $('#oppWrap').querySelectorAll('.ca-opp').forEach(card=>{
+    const key = card.dataset.tradeKey;
+    card.querySelector('.copy-trade')?.addEventListener('click', e=>{
+      e.stopPropagation();
+      const r = opps.find(o=>tradeKey(o.coin,o.expiry,o.strike)===key);
+      if(r) copyText('Buy YES on '+(VLABEL[r.yes_venue])+' @ $'+r.yes_cost.toFixed(2)+' + NO on '+(VLABEL[r.no_venue])+' @ $'+r.no_cost.toFixed(2), e.target);
+    });
+    card.querySelector('.goto-trade')?.addEventListener('click', e=>{ e.stopPropagation(); scrollToTrade(key); });
+    card.addEventListener('click', ()=>{ if(openTradeKeys.has(key)) scrollToTrade(key); });
+  });
+}
+
+function dataNoteText(st, mkts, cov){
+  if(!st.updated) return '';
+  const base = 'Updated '+new Date(st.updated).toLocaleTimeString()+'. Tracking '+(st.coins||[]).join(', ')+'. ';
+  if(mkts.length > 0) return base + 'Matched contracts share expiry and strike across venues.';
+  const reason = emptyReason({coverage:cov, markets:mkts});
+  return base + reason;
+}
+
+function render(d){
+  lastArbData = d;
+  const st = d.stats || {};
+  if(d.formula) $('#fx').textContent = d.formula;
+  $('#stLive').textContent = st.live_opportunities ?? 0;
+  $('#stCum').textContent = st.cumulative_opportunities ?? 0;
+  $('#stMatched').textContent = st.matched_markets ?? 0;
+  const vlive = st.venues_live || [];
+  $('#stVenues').textContent = vlive.length;
+  $('#stVenuesSub').textContent = vlive.map(v=>VLABEL[v]||v).join(', ') || 'quoting now';
+  const opps = d.opportunities || [];
+  const best = opps.length ? opps[0].max_arb : 0;
+  $('#stBest').textContent = best>0 ? '$'+best.toFixed(2) : '—';
+  updateSticky(st, opps, lastBotMeta);
+
+  renderOpps(opps, d);
+  const mkts = d.markets || [];
+  $('#mktCount').textContent = mkts.length;
+  $('#mktRows').innerHTML = mkts.map(renderMktRow).join('') || '<div class="ca-cell muted" style="padding:16px;grid-column:1/-1">'+emptyReason(d)+'</div>';
+  $('#mktCards').innerHTML = mkts.map(renderMktCard).join('') || '<div class="ca-empty">'+emptyReason(d)+'</div>';
+  renderCoverage(d.coverage||[]);
+  $('#dataNote').innerHTML = dataNoteText(st, mkts, d.coverage||[]);
+  tickCountdowns();
+}
+
+function tickCountdowns(){
+  if(tickTimer) clearInterval(tickTimer);
+  tickTimer = setInterval(()=>{
+    let changed = false;
+    if(lastArbData){
+      (lastArbData.opportunities||[]).forEach(o=>{ if(o.expires_in_s>0){ o.expires_in_s--; changed=true; } });
+      (lastArbData.markets||[]).forEach(m=>{ if(m.expires_in_s>0){ m.expires_in_s--; changed=true; } });
+      if(changed && lastArbData){
+        renderOpps(lastArbData.opportunities||[], lastArbData);
+        const mkts = lastArbData.markets||[];
+        $('#mktRows').innerHTML = mkts.map(renderMktRow).join('');
+        $('#mktCards').innerHTML = mkts.map(renderMktCard).join('');
+      }
+    }
+  }, 1000);
+}
+tickCountdowns();
+
+let pollFails = 0;
+async function poll(){
+  try {
+    const d = await fetch('/api/cryptoarbitrage',{cache:'no-store'}).then(r=>r.json());
+    pollFails = 0;
+    $('#apiError').classList.remove('show');
+    render(d);
+    const sec = d.stats?.poll_seconds || 2;
+    $('#pollState').textContent = 'polling every '+sec+'s';
+  } catch(e){
+    pollFails++;
+    $('#pollState').textContent = 'reconnecting…';
+    if(pollFails >= 2) $('#apiError').classList.add('show');
+  }
+}
+poll();
+setInterval(poll, POLL_MS);
+
+$('#covCoin').addEventListener('change', () => renderCoverage(lastCov));
+$('#covSharedOnly').addEventListener('change', () => renderCoverage(lastCov));
+$('#covShowAll').addEventListener('change', () => renderCoverage(lastCov));
+$('#fxToggle').addEventListener('click', () => {
+  const w = $('#fxWrap');
+  const open = w.classList.toggle('open');
+  $('#fxToggle').setAttribute('aria-expanded', open?'true':'false');
+  const hint = $('#fxToggle').querySelector('.fx-hint');
+  if(hint) hint.textContent = open ? 'hide' : 'show formula';
+});
+$('#notifyBtn').addEventListener('click', async () => {
+  if(!alertsOn && 'Notification' in window && Notification.permission==='default'){
+    await Notification.requestPermission();
+  }
+  alertsOn = !alertsOn;
+  const btn = $('#notifyBtn');
+  btn.textContent = alertsOn ? 'Alerts on' : 'Alerts off';
+  btn.classList.toggle('on', alertsOn);
+});
+
+async function pollBotSummary(){
+  try {
+    const d = await fetch('/api/cryptoarbitrage/bot',{cache:'no-store'}).then(r=>r.json());
+    if(!d || d.error) return;
+    lastBotMeta = d;
+    openTradeKeys = new Set((d.trades||[]).filter(t=>t.status==='open').map(t=>t.id));
+    if(lastArbData) updateSticky(lastArbData.stats||{}, lastArbData.opportunities||[], d);
+    (d.log||[]).forEach(e=>{
+      if(e.kind==='enter'){
+        const id = tradeKey(e.coin,e.expiry,e.strike);
+        if(!seenEnters.has(id)){ seenEnters.add(id); notify('Bot entered '+e.coin+' — lock $'+((e.locked_cents||0)/100).toFixed(2)); }
+      }
+    });
+    if(lastArbData) renderOpps(lastArbData.opportunities||[], lastArbData);
+  } catch(e){}
+}
+pollBotSummary();
+setInterval(pollBotSummary, POLL_MS);
+</script>
+</body>
+</html>
