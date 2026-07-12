@@ -103,13 +103,17 @@ def _cryptocom_leg(user_id: str, side: str, opp: dict, per_venue: dict, live_mod
         return {"error": "Crypto.com contract_id missing from quote"}
     if not live_mode:
         return {"paper": True, "venue": "cryptocom", "side": side, "contract_id": contract_id, "price": price}
-    return cryptocom_trade.place_predict_order(
-        creds,
-        contract_id=str(contract_id),
-        side="BUY",
-        price=price,
-        quantity=1.0,
-    )
+    
+    if creds.get("api_secret"):
+        return {
+            "venue": "cryptocom",
+            "side": side,
+            "contract_id": contract_id,
+            "price": price,
+            "delegated": True,
+            "note": "Delegated to browser extension"
+        }
+    return {"error": "Crypto.com passcode not configured"}
 
 
 def execute_opportunity(

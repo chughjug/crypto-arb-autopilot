@@ -231,14 +231,43 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   // Test trade (from popup "Test" button)
   if (msg.type === 'TEST_TRADE') {
-    cfg().then(conf => {
-      if (!conf.cryptoPin) {
-        chrome.runtime.sendMessage({ type: 'TEST_RESULT', ok: false, error: 'No PIN configured' });
+    cfg().then(async conf => {
+      let pin = conf.cryptoPin;
+      if (!pin && conf.appUrl && conf.sessionToken) {
+        try {
+          const url = conf.appUrl.replace(/\/$/, '') + '/api/autopilot/bankroll';
+          const res = await fetch(url, {
+            headers: { 'Cookie': `session=${conf.sessionToken}` },
+            credentials: 'include',
+          });
+          if (res.ok) {
+            const data = await res.json();
+            pin = data?.scanner?.cc_pin || '';
+          }
+        } catch (e) {
+          console.error('[CryptoArb] Error fetching PIN for trade execution:', e);
+        }
+      }
+
+      if (!pin) {
+        log('Trade failed: No transaction PIN configured in dashboard or extension');
+        chrome.notifications.create('pin_err_' + Date.now(), {
+          type: 'basic',
+          iconUrl: 'icons/icon48.png',
+          title: '❌ Execution failed',
+          message: 'No Transaction PIN configured.',
+          priority: 2,
+        });
+        sendResponse({ ok: false, error: 'No PIN' });
         return;
       }
-      log('Test trade triggered manually', msg.opp);
+
+      if (msg.quantity) {
+        conf.defaultQty = msg.quantity;
+      }
+
       if (!isExecuting) {
-        executeArb(msg.opp, conf);
+        executeArb(msg.opp, conf, pin);
         sendResponse({ ok: true });
       } else {
         sendResponse({ ok: false, error: 'Already executing' });

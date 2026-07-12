@@ -606,6 +606,26 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(200, {"ok": True}, extra)
             return
 
+        if path == "/api/autopilot/execute":
+            user, _, extra = self._current_user()
+            if not user:
+                self._send_json(401, {"error": "sign in required"}, extra)
+                return
+            body = self._read_json()
+            opp = body.get("opp")
+            contracts = int(body.get("contracts") or 10)
+            if not opp:
+                self._send_json(400, {"error": "opportunity required"}, extra)
+                return
+            import autopilot_store
+            import autopilot_executor
+            cfg = autopilot_store.get_config(user["id"])
+            res = autopilot_executor.execute_opportunity(
+                user["id"], opp, contracts=contracts, live_mode=bool(cfg.get("live_mode"))
+            )
+            self._send_json(200, res, extra)
+            return
+
         if path == "/api/autopilot/start":
             user, _, extra = self._current_user()
             if not user:

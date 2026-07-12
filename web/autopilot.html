@@ -2465,8 +2465,29 @@ function startBankroll() {
           method: 'POST',
           body: JSON.stringify({ opp: currentQexOpp, contracts: qty }),
         });
-        btn.textContent = '✓ Sent!'; btn.style.background = 'var(--emerald)';
-        setTimeout(() => { closeQex(); refreshBankroll(); }, 1200);
+        
+        let delegatedLeg = null;
+        if (res && res.legs) {
+          for (const key in res.legs) {
+            if (res.legs[key] && res.legs[key].venue === 'cryptocom' && res.legs[key].delegated) {
+              delegatedLeg = res.legs[key];
+              break;
+            }
+          }
+        }
+        
+        if (delegatedLeg) {
+          window.postMessage({
+            type: 'EXECUTE_CRYPTOCOM_TRADE',
+            opp: currentQexOpp,
+            quantity: qty,
+          }, '*');
+          btn.textContent = '✓ Triggered!'; btn.style.background = 'var(--indigo)';
+        } else {
+          btn.textContent = '✓ Sent!'; btn.style.background = 'var(--emerald)';
+        }
+        
+        setTimeout(() => { closeQex(); refreshBankroll(); }, 1500);
       } catch (e) {
         btn.textContent = 'Error — ' + String(e.message || e).slice(0, 50);
         btn.style.background = 'var(--red)'; btn.disabled = false;
