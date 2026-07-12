@@ -35,15 +35,28 @@ git push heroku main
 | Variable | Purpose |
 |----------|---------|
 | `AUTOPILOT_SECRET_KEY` | Encrypts per-user Kalshi/Poly/Crypto.com credentials (required in prod) |
-| `CATALOG_DB_PATH` | SQLite catalog (`/tmp/catalog.db` on Heroku) |
-| `ACCOUNTS_DB_PATH` | User accounts DB |
-| `AUTOPILOT_DB_PATH` | Autopilot config + encrypted creds |
+| `DATABASE_URL` | **Supabase Postgres** — accounts, sessions, autopilot config, venue creds, logs, trade history (recommended on Heroku) |
+| `SUPABASE_DB_URL` | Alias for `DATABASE_URL` |
+| `CATALOG_DB_PATH` | SQLite market catalog cache (`/tmp/catalog.db` on Heroku) |
+| `ACCOUNTS_DB_PATH` | SQLite accounts fallback when `DATABASE_URL` unset |
+| `AUTOPILOT_DB_PATH` | SQLite autopilot fallback when `DATABASE_URL` unset |
 | `CRYPTO_ARB_POLL_SECONDS` | Arb scanner interval (default 2s) |
+
+## Supabase setup
+
+1. Create a project at [supabase.com](https://supabase.com)
+2. **Project Settings → Database → Connection string → URI** (use Transaction pooler for server apps)
+3. Set on Heroku:
+   ```bash
+   heroku config:set DATABASE_URL='postgresql://postgres.[ref]:[password]@...pooler.supabase.com:6543/postgres'
+   ```
+4. Schema is applied automatically on first boot (`supabase_schema.sql`). Or paste that file into the Supabase SQL editor manually.
+
+When `DATABASE_URL` is set, all user data persists across dyno restarts. Without it, accounts/autopilot use `/tmp` SQLite (wiped on redeploy).
 
 ## Security
 
-- **Passwords:** scrypt (N=2^15, r=8, p=1), min 10 characters
-- **2FA:** mandatory TOTP (Google Authenticator / 1Password / Authy) on every sign-in
+- **Auth:** username + mandatory TOTP 2FA (no passwords)
 - **Venue API keys:** per-user AES-256-GCM with HKDF-derived keys, sensitive fields sealed individually, master envelope layer
 - **Sessions:** random tokens stored as HMAC-SHA256 hashes only (never plaintext in DB)
 - **Cookies:** `HttpOnly`, `SameSite=Strict`, `Secure` on Heroku

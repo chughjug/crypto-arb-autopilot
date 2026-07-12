@@ -341,6 +341,24 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(200, autopilot_bankroll.bankroll_payload(user["id"]), extra)
             return
 
+        if path == "/api/autopilot/trades":
+            user, _, extra = self._current_user()
+            if not user or user.get("is_guest"):
+                self._send_json(401, {"error": "sign in required"}, extra)
+                return
+            import autopilot_store
+            qs = parse_qs(parsed.query)
+            try:
+                limit = max(1, min(500, int((qs.get("limit") or ["100"])[0])))
+            except ValueError:
+                limit = 100
+            self._send_json(200, {
+                "trades": autopilot_store.recent_trades(user["id"], limit=limit),
+                "stats": autopilot_store.trade_stats(user["id"]),
+                "db": __import__("db").backend_label(),
+            }, extra)
+            return
+
         # HTML pages
         page_key = path
         if path.endswith(".html"):

@@ -8,6 +8,10 @@
       "description": "Fernet key seed for encrypting user venue credentials",
       "generator": "secret"
     },
+    "DATABASE_URL": {
+      "description": "Supabase/PostgreSQL connection URI (accounts, autopilot, trade history). Omit for ephemeral SQLite on /tmp.",
+      "required": false
+    },
     "CATALOG_WARM": { "value": "1" },
     "CATALOG_DB_PATH": { "value": "/tmp/catalog.db" },
     "ACCOUNTS_DB_PATH": { "value": "/tmp/accounts.db" },

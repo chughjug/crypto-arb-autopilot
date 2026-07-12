@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 import re
 import secrets
-import sqlite3
 import threading
 import time
 from pathlib import Path
@@ -13,10 +12,11 @@ from typing import Any
 
 import pyotp
 
+import db
 import vault
 
 _lock = threading.Lock()
-_conn: sqlite3.Connection | None = None
+_conn = None
 
 SESSION_DAYS = int(os.environ.get("SESSION_DAYS", "14"))
 SESSION_COOKIE = "caa_session"
@@ -38,58 +38,56 @@ def _db_path() -> str:
     return str(path)
 
 
-def _connect() -> sqlite3.Connection:
+def _connect():
     global _conn
     if _conn is None:
-        _conn = sqlite3.connect(_db_path(), check_same_thread=False)
-        _conn.row_factory = sqlite3.Row
-        _conn.executescript("""
-            CREATE TABLE IF NOT EXISTS users (
-                id TEXT PRIMARY KEY,
-                email TEXT UNIQUE,
-                password_hash TEXT,
-                username TEXT UNIQUE,
-                display_name TEXT NOT NULL,
-                is_guest INTEGER NOT NULL DEFAULT 0,
-                totp_secret_enc TEXT,
-                totp_enabled INTEGER NOT NULL DEFAULT 0,
-                created_at REAL NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS sessions (
-                token_hash TEXT PRIMARY KEY,
-                user_id TEXT NOT NULL,
-                created_at REAL NOT NULL,
-                expires_at REAL NOT NULL,
-                FOREIGN KEY (user_id) REFERENCES users(id)
-            );
-            CREATE TABLE IF NOT EXISTS auth_challenges (
-                token_hash TEXT PRIMARY KEY,
-                user_id TEXT NOT NULL,
-                kind TEXT NOT NULL,
-                expires_at REAL NOT NULL
-            );
-            CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
-            CREATE INDEX IF NOT EXISTS idx_challenges_user ON auth_challenges(user_id);
-        """)
-        cols = {r[1] for r in _conn.execute("PRAGMA table_info(users)").fetchall()}
-        if "totp_secret_enc" not in cols:
-            _conn.execute("ALTER TABLE users ADD COLUMN totp_secret_enc TEXT")
-        if "totp_enabled" not in cols:
-            _conn.execute("ALTER TABLE users ADD COLUMN totp_enabled INTEGER NOT NULL DEFAULT 0")
-        # Migrate session table to hashed tokens
-        sess_cols = {r[1] for r in _conn.execute("PRAGMA table_info(sessions)").fetchall()}
-        if "token" in sess_cols and "token_hash" not in sess_cols:
-            _conn.execute("ALTER TABLE sessions RENAME TO sessions_legacy")
+        _conn = db.connect(sqlite_path=_db_path())
+        if not db.use_postgres():
             _conn.executescript("""
-                CREATE TABLE sessions (
+                CREATE TABLE IF NOT EXISTS users (
+                    id TEXT PRIMARY KEY,
+                    email TEXT UNIQUE,
+                    password_hash TEXT,
+                    username TEXT UNIQUE,
+                    display_name TEXT NOT NULL,
+                    is_guest INTEGER NOT NULL DEFAULT 0,
+                    totp_secret_enc TEXT,
+                    totp_enabled INTEGER NOT NULL DEFAULT 0,
+                    created_at REAL NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS sessions (
                     token_hash TEXT PRIMARY KEY,
                     user_id TEXT NOT NULL,
                     created_at REAL NOT NULL,
                     expires_at REAL NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS auth_challenges (
+                    token_hash TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    kind TEXT NOT NULL,
+                    expires_at REAL NOT NULL
+                );
                 CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
+                CREATE INDEX IF NOT EXISTS idx_challenges_user ON auth_challenges(user_id);
             """)
-        _conn.commit()
+            cols = {r["name"] for r in _conn.execute("PRAGMA table_info(users)").fetchall()}
+            if "totp_secret_enc" not in cols:
+                _conn.execute("ALTER TABLE users ADD COLUMN totp_secret_enc TEXT")
+            if "totp_enabled" not in cols:
+                _conn.execute("ALTER TABLE users ADD COLUMN totp_enabled INTEGER NOT NULL DEFAULT 0")
+            sess_cols = {r["name"] for r in _conn.execute("PRAGMA table_info(sessions)").fetchall()}
+            if "token" in sess_cols and "token_hash" not in sess_cols:
+                _conn.execute("ALTER TABLE sessions RENAME TO sessions_legacy")
+                _conn.executescript("""
+                    CREATE TABLE sessions (
+                        token_hash TEXT PRIMARY KEY,
+                        user_id TEXT NOT NULL,
+                        created_at REAL NOT NULL,
+                        expires_at REAL NOT NULL
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
+                """)
+            _conn.commit()
     return _conn
 
 
@@ -112,7 +110,7 @@ def _normalize_username(username: str) -> str:
     return username
 
 
-def _user_row(row: sqlite3.Row | None) -> dict[str, Any] | None:
+def _user_row(row) -> dict[str, Any] | None:
     if not row:
         return None
     name = row["display_name"]
@@ -128,7 +126,7 @@ def _user_row(row: sqlite3.Row | None) -> dict[str, Any] | None:
     }
 
 
-def _create_session(conn: sqlite3.Connection, user_id: str) -> str:
+def _create_session(conn, user_id: str) -> str:
     token = secrets.token_urlsafe(32)
     now = time.time()
     conn.execute(
@@ -138,7 +136,7 @@ def _create_session(conn: sqlite3.Connection, user_id: str) -> str:
     return token
 
 
-def _issue_challenge(conn: sqlite3.Connection, user_id: str, kind: str, ttl: int) -> str:
+def _issue_challenge(conn, user_id: str, kind: str, ttl: int) -> str:
     token = secrets.token_urlsafe(32)
     conn.execute(
         "INSERT INTO auth_challenges(token_hash, user_id, kind, expires_at) VALUES(?,?,?,?)",
@@ -147,7 +145,7 @@ def _issue_challenge(conn: sqlite3.Connection, user_id: str, kind: str, ttl: int
     return token
 
 
-def _consume_challenge(conn: sqlite3.Connection, token: str, kind: str) -> str | None:
+def _consume_challenge(conn, token: str, kind: str) -> str | None:
     th = vault.hash_token(token)
     row = conn.execute(
         "SELECT user_id, expires_at FROM auth_challenges WHERE token_hash=? AND kind=?",

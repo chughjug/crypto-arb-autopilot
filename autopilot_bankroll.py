@@ -11,6 +11,7 @@ import autopilot_store
 import bots_hub
 import crypto_arb
 import crypto_arb_bot
+import db
 
 
 def _venue_cash_usd(venue: str, bal: dict) -> float | None:
@@ -84,6 +85,28 @@ def _parse_execution(detail: dict, log: dict) -> dict | None:
         "cost_total": cost_total,
         "log_level": log.get("level"),
         "log_message": log.get("message"),
+    }
+
+
+def _execution_from_trade(trade: dict) -> dict:
+    return {
+        "id": trade.get("arb_id") or trade.get("id"),
+        "status": "filled" if trade.get("ok") else "failed",
+        "coin": trade.get("coin"),
+        "expiry": trade.get("expiry"),
+        "contracts": trade.get("contracts"),
+        "locked_pnl": trade.get("locked_pnl"),
+        "spread": (float(trade["edge_cents"]) / 100.0) if trade.get("edge_cents") is not None else None,
+        "spread_cents": trade.get("edge_cents"),
+        "edge_cents": trade.get("edge_cents"),
+        "entry_ts": trade.get("ts"),
+        "live_mode": trade.get("live_mode"),
+        "ok": trade.get("ok"),
+        "errors": trade.get("errors") or [],
+        "legs": trade.get("legs") or [],
+        "cost_total": trade.get("cost_total"),
+        "trade_status": trade.get("status"),
+        "pnl": trade.get("pnl"),
     }
 
 
@@ -239,7 +262,11 @@ def bankroll_payload(user_id: str) -> dict[str, Any]:
     status = runner.status()
     balances = status.get("balances") or autopilot_executor.venue_balances(user_id)
     logs = autopilot_store.recent_logs(user_id, limit=250)
+    stored_trades = autopilot_store.recent_trades(user_id, limit=200)
+    trade_stats = autopilot_store.trade_stats(user_id)
     executions = _executions_from_logs(logs)
+    if stored_trades:
+        executions = [_execution_from_trade(t) for t in stored_trades] or executions
     trade_snap = _trade_snap(executions)
 
     bankroll = float(cfg.get("bankroll_usd") or 300)
@@ -324,4 +351,7 @@ def bankroll_payload(user_id: str) -> dict[str, Any]:
         "paper_benchmark": _paper_benchmark(strategy_id),
         "scanner": scanner,
         "activity": logs[:40],
+        "stored_trades": stored_trades,
+        "trade_stats": trade_stats,
+        "db": db.backend_label(),
     }

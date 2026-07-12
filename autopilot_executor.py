@@ -178,4 +178,8 @@ def execute_opportunity(
         f"{'Live' if live_mode else 'Paper'} arb {opp.get('coin')} x{contracts}",
         result,
     )
+    try:
+        autopilot_store.save_trade(user_id, result)
+    except Exception:
+        log.exception("save_trade failed user=%s", user_id)
     return result
