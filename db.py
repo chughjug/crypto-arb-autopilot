@@ -80,12 +80,17 @@ class Connection:
             from psycopg.rows import dict_row
 
             cur = self._raw.cursor(row_factory=dict_row)
-            cur.execute(sql, tuple(params))
-            if cur.description:
-                rows = [_Row(dict(r)) for r in cur.fetchall()]
-            else:
-                rows = []
-            cur.close()
+            try:
+                cur.execute(sql, tuple(params))
+                if cur.description:
+                    rows = [_Row(dict(r)) for r in cur.fetchall()]
+                else:
+                    rows = []
+            except Exception:
+                self._raw.rollback()
+                raise
+            finally:
+                cur.close()
             return _Cursor(rows)
         cur = self._raw.execute(sql, tuple(params))
         rows = [_Row({k: row[k] for k in row.keys()}) for row in cur.fetchall()]

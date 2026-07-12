@@ -186,15 +186,15 @@ def register(username: str, guest_id: str | None = None) -> dict[str, Any]:
             raise ValueError("username already taken")
         uid: str | None = None
         if guest_id:
-            guest = conn.execute("SELECT * FROM users WHERE id=? AND is_guest=1", (guest_id,)).fetchone()
+            guest = conn.execute("SELECT * FROM users WHERE id=? AND is_guest=?", (guest_id, True)).fetchone()
             if guest:
                 uid = guest_id
         if uid:
             secret_enc = vault.seal_string(uid, totp_secret, purpose=vault.PURPOSE_TOTP)
             conn.execute(
                 "UPDATE users SET username=?, display_name=?, password_hash=NULL, "
-                "totp_secret_enc=?, totp_enabled=0, is_guest=0 WHERE id=?",
-                (key, display, secret_enc, uid),
+                "totp_secret_enc=?, totp_enabled=?, is_guest=? WHERE id=?",
+                (key, display, secret_enc, False, False, uid),
             )
         else:
             uid = _new_id()
@@ -202,7 +202,7 @@ def register(username: str, guest_id: str | None = None) -> dict[str, Any]:
             conn.execute(
                 "INSERT INTO users(id, email, password_hash, username, display_name, "
                 "is_guest, totp_secret_enc, totp_enabled, created_at) VALUES(?,?,?,?,?,?,?,?,?)",
-                (uid, None, None, key, display, 0, secret_enc, 0, now),
+                (uid, None, None, key, display, False, secret_enc, False, now),
             )
         setup_token = _issue_challenge(conn, uid, "setup", _SETUP_TTL)
         conn.commit()
@@ -226,7 +226,7 @@ def confirm_2fa_setup(setup_token: str, code: str) -> tuple[str, dict[str, Any]]
             raise ValueError("user not found")
         if not _verify_totp(uid, row["totp_secret_enc"], code):
             raise ValueError("invalid authenticator code")
-        conn.execute("UPDATE users SET totp_enabled=1 WHERE id=?", (uid,))
+        conn.execute("UPDATE users SET totp_enabled=? WHERE id=?", (True, uid))
         token = _create_session(conn, uid)
         conn.commit()
         row = conn.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone()
@@ -280,7 +280,7 @@ def create_guest() -> tuple[str, dict[str, Any]]:
         conn.execute(
             "INSERT INTO users(id, email, password_hash, username, display_name, is_guest, created_at) "
             "VALUES(?,?,?,?,?,?,?)",
-            (uid, None, None, None, name, 1, now),
+            (uid, None, None, None, name, True, now),
         )
         token = _create_session(conn, uid)
         conn.commit()
