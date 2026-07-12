@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bankroll · Crypto Arb</title>
+<link rel="stylesheet" href="/theme.css" />
+<link rel="stylesheet" href="/bot-panel.css" />
+<script src="/viewmode.js"></script>
+<style>
+.br-page { max-width: 1400px; padding: 12px 16px 48px; }
+.br-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; font-size: 11px; color: var(--muted); }
+.br-meta span { padding: 4px 8px; border: 1px solid var(--border); border-radius: 999px; background: #fff; }
+.br-meta .on { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
+.br-meta .off { background: var(--surface-2); }
+.br-meta .live { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+#equityChart { display: block; width: 100%; height: 180px; border-radius: 8px; background: #fafbfc; border: 1px solid var(--border); }
+.exec-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.exec-table th, .exec-table td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; text-align: left; }
+.exec-table th { font-size: 9px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted-2); background: var(--surface-2); position: sticky; top: 0; }
+.exec-table td.r { text-align: right; font-variant-numeric: tabular-nums; }
+.exec-table tr.ok td:first-child { box-shadow: inset 3px 0 #10b981; }
+.exec-table tr.fail td:first-child { box-shadow: inset 3px 0 #dc2626; }
+.log-list { max-height: 220px; overflow: auto; font-family: ui-monospace, monospace; font-size: 11px; }
+.log-list div { padding: 5px 0; border-bottom: 1px dashed var(--border); }
+.cmp-vs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cmp-vs .col { padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
+.cmp-vs h3 { margin: 0 0 8px; font-size: 13px; }
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 6px; }
+.stat-grid div { padding: 8px; border-radius: 8px; background: var(--surface-2); }
+.stat-grid span { display: block; font-size: 8px; font-weight: 800; text-transform: uppercase; color: var(--muted-2); }
+.stat-grid b { display: block; margin-top: 2px; font-size: 12px; font-variant-numeric: tabular-nums; }
+@media (max-width: 800px) { .cmp-vs { grid-template-columns: 1fr; } .dash-grid { grid-template-columns: 1fr; } .dash-panel.span-2 { grid-column: span 1; } }
+</style>
+</head>
+<body>
+<div id="appHeader"></div>
+<div class="page br-page bots-terminal">
+
+  <header class="cmd-strip">
+    <div class="cmd-brand">
+      <div class="cmd-eyebrow"><span class="live-dot"></span> Live bankroll</div>
+      <h1>Bankroll &amp; execution</h1>
+      <p>Configured capital · venue balances · fills · paper benchmark</p>
+      <div class="br-meta" id="metaChips">—</div>
+    </div>
+    <div class="cmd-kpis" id="kpiStrip">
+      <div class="kpi-chip skeleton"></div>
+      <div class="kpi-chip skeleton"></div>
+      <div class="kpi-chip skeleton"></div>
+      <div class="kpi-chip skeleton"></div>
+    </div>
+    <div class="cmd-actions">
+      <div class="cmd-live"><span class="refresh-dot"></span> <span id="ts">—</span></div>
+      <a class="cmd-link" href="/autopilot">Autopilot settings ↗</a>
+    </div>
+  </header>
+
+  <nav class="cmd-nav" id="viewTabs" aria-label="Bankroll views">
+    <button type="button" class="active" data-view="overview">Overview</button>
+    <button type="button" data-view="venues">Venues</button>
+    <button type="button" data-view="executions">Executions</button>
+    <button type="button" data-view="heatmaps">Heatmaps</button>
+    <button type="button" data-view="benchmark">Paper benchmark</button>
+    <button type="button" data-view="activity">Activity</button>
+  </nav>
+
+  <main class="cmd-main">
+
+    <section class="cmd-view active" data-view-panel="overview">
+      <div class="dash-grid">
+        <article class="dash-panel dash-chart">
+          <header class="panel-head">
+            <div>
+              <h2>Equity path</h2>
+              <p>Configured bankroll + cumulative locked edge on fills</p>
+            </div>
+          </header>
+          <canvas id="equityChart" height="180"></canvas>
+        </article>
+
+        <article class="dash-panel">
+          <header class="panel-head">
+            <div><h2>Runner health</h2><p>Autopilot loop stats</p></div>
+            <div class="panel-stat" id="runnerState">—</div>
+          </header>
+          <div class="stat-grid" id="runnerGrid"></div>
+        </article>
+
+        <article class="dash-panel span-2">
+          <header class="panel-head">
+            <div><h2>Capital summary</h2><p>Deployable vs venue cash vs pending</p></div>
+          </header>
+          <div class="stat-grid" id="capitalGrid"></div>
+        </article>
+
+        <article class="dash-panel span-2">
+          <header class="panel-head">
+            <div><h2>Scanner</h2><p>Live arb feed the runner watches</p></div>
+            <div class="panel-stat" id="scannerStat">—</div>
+          </header>
+          <div class="stat-grid" id="scannerGrid"></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="cmd-view" data-view-panel="venues">
+      <div class="dash-grid">
+        <article class="dash-panel span-2">
+          <header class="panel-head"><div><h2>Venue balances</h2><p>Live cash from connected APIs</p></div></header>
+          <div class="data-table-wrap compact" style="max-height:none">
+            <table class="exec-table" id="venueTable">
+              <thead><tr><th>Venue</th><th>Status</th><th class="r">Cash USD</th><th>Details</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </article>
+        <article class="dash-panel span-2">
+          <header class="panel-head"><div><h2>Recommended allocation</h2><p>Based on your execution leg history</p></div></header>
+          <div id="venueAllocator"><div class="empty">Loading…</div></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="cmd-view" data-view-panel="executions">
+      <article class="dash-panel">
+        <header class="panel-head">
+          <div><h2>Execution ledger</h2><p>Parsed from autopilot activity logs</p></div>
+          <div class="panel-stat" id="execSummary">—</div>
+        </header>
+        <div class="data-table-wrap compact" style="max-height:480px">
+          <table class="exec-table" id="execTable">
+            <thead><tr>
+              <th>Time</th><th>Coin</th><th>Expiry</th><th class="r">×</th>
+              <th class="r">Spread</th><th class="r">Locked</th><th>Mode</th><th>Status</th><th>Legs</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </article>
+      <article class="dash-panel" style="margin-top:10px">
+        <header class="panel-head"><div><h2>Execution risk</h2><p>Fill quality &amp; exposure</p></div></header>
+        <div class="stat-grid" id="execRiskGrid"></div>
+      </article>
+    </section>
+
+    <section class="cmd-view" data-view-panel="heatmaps">
+      <article class="dash-panel">
+        <header class="panel-head">
+          <div>
+            <h2 id="heatmapTitle">Spread deployment</h2>
+            <p id="heatmapCopy">Your fills by entry spread width</p>
+          </div>
+          <div class="seg" id="heatMode">
+            <button type="button" class="active" data-mode="spread">Spread</button>
+            <button type="button" data-mode="coin">Coin</button>
+            <button type="button" data-mode="expiry">Expiry</button>
+          </div>
+        </header>
+        <div class="heat-legend"><span class="swatch"></span> low <span class="swatch high"></span> high <b id="heatmapLegendNote">Spread = $1 − YES − NO</b></div>
+        <div class="heat-scroll"><div class="heat-matrix" id="heatMatrix"></div></div>
+      </article>
+      <article class="dash-panel" style="margin-top:10px">
+        <header class="panel-head"><div><h2>Calibration</h2><p>Predicted vs realized (settled sample)</p></div></header>
+        <div id="calibrationPanel"><div class="empty">—</div></div>
+      </article>
+    </section>
+
+    <section class="cmd-view" data-view-panel="benchmark">
+      <article class="dash-panel">
+        <header class="panel-head">
+          <div><h2>Paper vs your strategy</h2><p>Same sizing model on $50 independent paper bankroll</p></div>
+          <div class="panel-stat" id="benchLabel">—</div>
+        </header>
+        <div class="cmp-vs" id="benchmarkCmp">
+          <div class="col"><h3>Your live execution</h3><div class="stat-grid" id="liveBench"></div></div>
+          <div class="col"><h3>Paper benchmark</h3><div class="stat-grid" id="paperBench"></div></div>
+        </div>
+        <p class="foot-note" id="benchNote"></p>
+      </article>
+    </section>
+
+    <section class="cmd-view" data-view-panel="activity">
+      <article class="dash-panel">
+        <header class="panel-head"><div><h2>Activity log</h2><p>Recent autopilot events</p></div></header>
+        <div class="log-list" id="activityLog"><div>—</div></div>
+      </article>
+    </section>
+
+  </main>
+</div>
+
+<script src="/header.js?v=2"></script>
+<script>
+const $ = id => document.getElementById(id);
+const money = v => (v == null || Number.isNaN(v) ? '—' : ((v < 0 ? '-$' : '$') + Math.abs(v).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})));
+const pnlFmt = v => v == null ? '—' : ((v >= 0 ? '+' : '') + money(v));
+const pnlCls = v => v == null ? '' : (v > 0 ? 'up' : (v < 0 ? 'down' : ''));
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmtTime = ts => ts ? new Date(ts * 1000).toLocaleString() : '—';
+
+const SPREAD_BUCKETS = [
+  {id:'micro', label:'< 2¢'}, {id:'small', label:'2–5¢'},
+  {id:'medium', label:'5–10¢'}, {id:'wide', label:'10¢+'},
+];
+const EXPIRY_BUCKETS = [
+  {id:'lt_1m', label:'< 1m'}, {id:'m1_5', label:'1–5m'},
+  {id:'m5_15', label:'5–15m'}, {id:'gt_15m', label:'15m+'},
+];
+
+let data = null;
+let heatMode = 'spread';
+
+async function api(path) {
+  const r = await fetch(path, { credentials: 'same-origin' });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || r.statusText);
+  return d;
+}
+
+function kpi(label, value, cls) {
+  return '<div class="kpi-chip"><span>' + label + '</span><b class="' + (cls || '') + '">' + value + '</b></div>';
+}
+
+function statCell(label, value, cls) {
+  return '<div><span>' + label + '</span><b class="' + (cls || '') + '">' + value + '</b></div>';
+}
+
+function setView(view) {
+  document.querySelectorAll('.cmd-nav button').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+  document.querySelectorAll('[data-view-panel]').forEach(p => p.classList.toggle('active', p.dataset.viewPanel === view));
+}
+
+function drawEquity(curve) {
+  const canvas = $('equityChart');
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, w, h);
+  const pts = curve || [];
+  if (pts.length < 2) {
+    ctx.fillStyle = '#94a3b8'; ctx.font = '12px sans-serif';
+    ctx.fillText('No fills yet — equity flat at bankroll', 16, h / 2);
+    return;
+  }
+  const xs = pts.map(p => p.ts), ys = pts.map(p => p.equity);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys) * 0.98, maxY = Math.max(...ys) * 1.02 || 1;
+  const pad = 12;
+  const plot = (ts, eq) => ({
+    x: pad + (ts - minX) / (maxX - minX || 1) * (w - pad * 2),
+    y: h - pad - (eq - minY) / (maxY - minY || 1) * (h - pad * 2),
+  });
+  ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1;
+  for (let i = 0; i < 4; i++) {
+    const y = pad + i * (h - pad * 2) / 3;
+    ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(w - pad, y); ctx.stroke();
+  }
+  ctx.beginPath();
+  pts.forEach((p, i) => {
+    const {x, y} = plot(p.ts, p.equity);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = '#2563eb'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = '#2563eb';
+  const last = plot(pts[pts.length - 1].ts, pts[pts.length - 1].equity);
+  ctx.beginPath(); ctx.arc(last.x, last.y, 4, 0, Math.PI * 2); ctx.fill();
+}
+
+function renderAllocator(alloc) {
+  if (!alloc?.venues?.length) {
+    $('venueAllocator').innerHTML = '<div class="empty">No execution leg history yet — allocator needs fills.</div>';
+    return;
+  }
+  const palette = {cryptocom:'#2563eb', kalshi:'#10b981', polymarket:'#8b5cf6'};
+  const bars = alloc.venues.map(v => '<span style="width:' + v.recommended_pct + '%;background:' + palette[v.venue] + '"></span>').join('');
+  const cards = alloc.venues.map(v => {
+    const flow = Number(v.settlement_cash_flow || 0);
+    return '<article class="alloc-card ' + esc(v.venue) + '"><div class="alloc-top"><span class="alloc-dot" style="background:' + palette[v.venue] + '"></span>' +
+      '<b>' + esc(v.label) + '</b><strong>' + Number(v.recommended_pct).toFixed(1) + '%</strong></div>' +
+      '<div class="alloc-amt">' + money(v.recommended_amount) + '<small> of ' + money(alloc.bankroll) + '</small></div>' +
+      '<dl><div><dt>Open</dt><dd>' + money(v.open_committed) + '</dd></div>' +
+      '<div><dt>Observed</dt><dd>' + money(v.historical_notional) + '</dd></div>' +
+      '<div><dt>Flow</dt><dd class="' + pnlCls(flow) + '">' + pnlFmt(flow) + '</dd></div>' +
+      '<div><dt>Legs</dt><dd>' + v.legs + '</dd></div></dl></article>';
+  }).join('');
+  $('venueAllocator').innerHTML =
+    '<div class="alloc-head"><div><h3>$' + alloc.bankroll + ' bankroll</h3><p>' + esc(alloc.method) + '</p></div>' +
+    '<div class="alloc-conf"><span>Confidence</span><b>' + Number(alloc.confidence_pct || 0).toFixed(0) + '%</b>' +
+    '<small>' + alloc.sample_legs + ' legs</small></div></div>' +
+    '<div class="alloc-bar">' + bars + '</div><div class="alloc-grid">' + cards + '</div>';
+}
+
+function renderHeatmap() {
+  if (!data) return;
+  const titles = {spread:'Spread deployment', coin:'Coin deployment', expiry:'Expiry deployment'};
+  const copies = {spread:'Fills by entry spread width', coin:'Fills by underlying', expiry:'Time-to-expiry at entry'};
+  $('heatmapTitle').textContent = titles[heatMode];
+  $('heatmapCopy').textContent = copies[heatMode];
+  let buckets, stats;
+  if (heatMode === 'coin') {
+    buckets = Object.keys(data.coin_stats || {}).map(k => ({id:k, label:k}));
+    stats = data.coin_stats || {};
+  } else if (heatMode === 'expiry') {
+    buckets = EXPIRY_BUCKETS;
+    stats = data.expiry_stats || {};
+  } else {
+    buckets = SPREAD_BUCKETS;
+    stats = data.spread_stats || {};
+  }
+  if (!buckets.length) {
+    $('heatMatrix').innerHTML = '<div class="empty">No data yet.</div>';
+    return;
+  }
+  const values = buckets.map(b => Math.abs(Number((stats[b.id] || {}).contracts || 0)));
+  const max = Math.max(1, ...values);
+  $('heatMatrix').style.setProperty('--heat-cols', String(buckets.length));
+  const header = '<div class="heat-h heat-dyn"><div>Source</div>' +
+    buckets.map(b => '<div><b>' + esc(b.label) + '</b></div>').join('') + '<div>Total</div></div>';
+  const cells = buckets.map(b => {
+    const cell = stats[b.id] || {};
+    const raw = Number(cell.contracts || 0);
+    const intensity = raw ? Math.max(.12, raw / max) : 0;
+    return '<div class="heat-cell volume" style="--heat:' + intensity.toFixed(3) + '"><b>' +
+      (raw ? raw + '×' : '—') + '</b><small>' + (cell.trades || 0) + ' tr</small></div>';
+  }).join('');
+  const totalPnl = buckets.reduce((s, b) => s + Number((stats[b.id] || {}).pnl || 0), 0);
+  const totalTr = buckets.reduce((s, b) => s + Number((stats[b.id] || {}).trades || 0), 0);
+  const body = '<div class="heat-r heat-dyn"><div class="heat-name"><b>Your executions</b><small>' +
+    (data.summary?.avg_spread_cents != null ? 'Avg ' + data.summary.avg_spread_cents.toFixed(2) + '¢' : '') +
+    '</small></div>' + cells + '<div class="heat-total"><b>' + totalTr + ' tr</b><small>' + pnlFmt(totalPnl) + '</small></div></div>';
+  $('heatMatrix').innerHTML = header + body;
+}
+
+function renderCalibration(cal) {
+  if (!cal?.buckets?.length) {
+    $('calibrationPanel').innerHTML = '<div class="empty">Need settled trades for calibration.</div>';
+    return;
+  }
+  const rows = cal.buckets.map(b =>
+    '<tr><td>' + esc(b.label) + '</td><td class="r">' + b.n + '</td><td class="r">' +
+    (b.avg_predicted != null ? money(b.avg_predicted) : '—') + '</td><td class="r">' +
+    (b.avg_realized != null ? money(b.avg_realized) : '—') + '</td><td class="r">' +
+    (b.avg_error != null ? pnlFmt(b.avg_error) : '—') + '</td><td class="r">' +
+    (b.win_rate != null ? b.win_rate + '%' : '—') + '</td></tr>'
+  ).join('');
+  $('calibrationPanel').innerHTML = '<table class="exec-table"><thead><tr><th>Bucket</th><th class="r">n</th><th class="r">Pred</th><th class="r">Real</th><th class="r">Err</th><th class="r">Win%</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+    (cal.sparse ? '<p class="foot-note">Sparse sample (&lt;5 settled) — treat as indicative only.</p>' : '');
+}
+
+function render(d) {
+  data = d;
+  const s = d.summary || {};
+  const r = d.runner || {};
+  const strat = d.strategy || {};
+  const risk = d.execution_risk || {};
+  const paper = d.paper_benchmark || {};
+  const scanner = d.scanner || {};
+
+  $('ts').textContent = 'Updated ' + new Date((d.updated_at || 0) * 1000).toLocaleTimeString();
+
+  $('metaChips').innerHTML =
+    '<span class="' + (s.running ? 'on' : 'off') + '">' + (s.running ? 'Running' : 'Stopped') + '</span>' +
+    '<span class="' + (s.live_mode ? 'live' : '') + '">' + (s.live_mode ? 'Live orders' : 'Paper / demo') + '</span>' +
+    '<span>' + esc(strat.label || d.config?.strategy_id || '—') + '</span>' +
+    '<span>' + s.venues_connected + '/3 connected · ' + s.venues_ready + ' ready</span>';
+
+  $('kpiStrip').innerHTML =
+    kpi('Bankroll', money(s.bankroll_usd)) +
+    kpi('Deployable', money(s.deployable_usd)) +
+    kpi('Venue cash', s.venue_cash_total_usd != null ? money(s.venue_cash_total_usd) : '—') +
+    kpi('Pending locked', pnlFmt(s.pending_locked_usd), pnlCls(s.pending_locked_usd)) +
+    kpi('Equity est.', money(s.equity_estimate_usd)) +
+    kpi('Return est.', s.return_estimate_pct != null ? s.return_estimate_pct.toFixed(2) + '%' : '—', pnlCls(s.return_estimate_pct)) +
+    kpi('Fill rate', risk.fill_rate_pct != null ? risk.fill_rate_pct + '%' : '—') +
+    kpi('Scanner arbs', String(scanner.opportunity_count ?? '—'), 'live');
+
+  $('runnerState').innerHTML = r.thread_alive
+    ? '<b style="color:#059669">Thread alive</b>' : '<span class="warn">Thread stopped</span>';
+
+  $('runnerGrid').innerHTML =
+    statCell('Cycles', r.cycles ?? 0) +
+    statCell('Attempts', r.attempts ?? 0) +
+    statCell('Fills', r.fills ?? 0) +
+    statCell('Attempt fill %', r.attempt_fill_rate_pct != null ? r.attempt_fill_rate_pct + '%' : '—') +
+    statCell('Cycles / fill', r.cycles_per_fill ?? '—') +
+    statCell('Last error', r.last_error ? esc(r.last_error).slice(0, 40) : '—') +
+    statCell('Last at', r.last_at ? fmtTime(r.last_at) : '—');
+
+  $('capitalGrid').innerHTML =
+    statCell('Reserve', s.reserve_pct + '% (' + money(s.reserve_usd) + ')') +
+    statCell('Deployed cost', money(s.deployed_cost_usd)) +
+    statCell('Cash gap', s.cash_gap_usd != null ? pnlFmt(s.cash_gap_usd) : '—', pnlCls(s.cash_gap_usd)) +
+    statCell('Gap %', s.cash_gap_pct != null ? s.cash_gap_pct + '%' : '—') +
+    statCell('Avg spread', s.avg_spread_cents != null ? s.avg_spread_cents.toFixed(2) + '¢' : '—') +
+    statCell('Min edge', strat.min_edge_cents != null ? strat.min_edge_cents + '¢' : '—') +
+    statCell('Max exposure', strat.max_exposure_pct != null ? strat.max_exposure_pct + '%' : '—') +
+    statCell('Max strike gap', strat.max_strike_gap_pct != null ? strat.max_strike_gap_pct + '%' : '—');
+
+  const ss = scanner.stats || {};
+  $('scannerStat').textContent = scanner.opportunity_count + ' opportunities';
+  $('scannerGrid').innerHTML =
+    statCell('Matched pairs', ss.matched ?? '—') +
+    statCell('Coins', ss.coins ?? '—') +
+    statCell('Best edge', ss.best_edge_cents != null ? ss.best_edge_cents + '¢' : '—') +
+    statCell('Poll', ss.poll_ms != null ? ss.poll_ms + 'ms' : '—');
+
+  $('venueTable').querySelector('tbody').innerHTML = (d.venues || []).map(v =>
+    '<tr><td><b>' + esc(v.label) + '</b></td><td>' +
+    (v.connected ? (v.ready ? '<span style="color:#059669">Ready</span>' : 'Connected') : 'Not connected') +
+    (v.error ? ' <span style="color:#dc2626">' + esc(v.error) + '</span>' : '') +
+    '</td><td class="r">' + (v.cash_usd != null ? money(v.cash_usd) : '—') + '</td><td>' +
+    (v.demo ? 'demo ' : '') + (v.masked?.api_key || v.masked?.funder || '') + '</td></tr>'
+  ).join('') || '<tr><td colspan="4">No venues</td></tr>';
+
+  renderAllocator(d.venue_allocation);
+
+  $('execSummary').textContent = (d.executions || []).length + ' rows · ' + (risk.filled_count || 0) + ' filled';
+  $('execTable').querySelector('tbody').innerHTML = (d.executions || []).map(ex =>
+    '<tr class="' + (ex.ok ? 'ok' : 'fail') + '"><td>' + fmtTime(ex.entry_ts) + '</td><td>' + esc(ex.coin) + '</td>' +
+    '<td>' + esc(ex.expiry) + '</td><td class="r">' + ex.contracts + '</td><td class="r">' +
+    (ex.spread_cents != null ? ex.spread_cents.toFixed(2) + '¢' : '—') + '</td><td class="r">' + pnlFmt(ex.locked_pnl) + '</td>' +
+    '<td>' + (ex.live_mode ? 'live' : 'paper') + '</td><td>' + (ex.ok ? 'filled' : 'failed') + '</td><td>' +
+    (ex.legs || []).map(l => esc(l.venue) + (l.error ? '⚠' : '')).join(', ') +
+    (ex.errors?.length ? ' · ' + esc(ex.errors.join('; ')) : '') + '</td></tr>'
+  ).join('') || '<tr><td colspan="9">No executions logged yet.</td></tr>';
+
+  $('execRiskGrid').innerHTML =
+    statCell('Executions', risk.execution_count ?? 0) +
+    statCell('Filled', risk.filled_count ?? 0) +
+    statCell('Failed', risk.failed_count ?? 0) +
+    statCell('Total contracts', risk.total_contracts ?? 0) +
+    statCell('Live fills', risk.live_fill_count ?? 0) +
+    statCell('Paper fills', risk.paper_fill_count ?? 0) +
+    statCell('Open exposure', risk.open_exposure_pct != null ? risk.open_exposure_pct + '%' : '—') +
+    statCell('Concentration', risk.open_concentration_pct != null ? risk.open_concentration_pct + '%' : '—') +
+    statCell('Avg cost/fill', risk.avg_cost_per_fill != null ? money(risk.avg_cost_per_fill) : '—');
+
+  drawEquity(d.equity_curve);
+  renderHeatmap();
+  renderCalibration(d.calibration);
+
+  $('benchLabel').textContent = paper.label || '—';
+  $('liveBench').innerHTML =
+    statCell('Fills', risk.filled_count ?? 0) +
+    statCell('Pending', pnlFmt(s.pending_locked_usd)) +
+    statCell('Deployed', money(s.deployed_cost_usd)) +
+    statCell('Return est.', s.return_estimate_pct != null ? s.return_estimate_pct.toFixed(2) + '%' : '—');
+  $('paperBench').innerHTML = paper.label ? (
+    statCell('Equity', money(paper.equity)) +
+    statCell('Confirmed P&L', pnlFmt(paper.confirmed_pnl), pnlCls(paper.confirmed_pnl)) +
+    statCell('Pending', pnlFmt(paper.locked_pending)) +
+    statCell('Return', paper.return_pct != null ? paper.return_pct.toFixed(2) + '%' : '—', pnlCls(paper.return_pct)) +
+    statCell('Open', paper.open_count ?? 0) +
+    statCell('Settled', paper.settled_count ?? 0) +
+    statCell('Win rate', paper.win_rate != null ? paper.win_rate + '%' : '—') +
+    statCell('Life', 'L' + (paper.life ?? 1) + ' · ' + (paper.busts ?? 0) + ' busts')
+  ) : statCell('—', 'No paper bot');
+  $('benchNote').textContent = paper.bankroll_note || '';
+
+  $('activityLog').innerHTML = (d.activity || []).map(l =>
+    '<div>[' + new Date(l.ts * 1000).toLocaleTimeString() + '] <b>' + esc(l.level) + '</b> ' +
+    esc(l.message) + (l.detail ? ' <span style="color:var(--muted-2)">' + esc(JSON.stringify(l.detail)).slice(0, 120) + '</span>' : '') + '</div>'
+  ).join('') || '<div>—</div>';
+}
+
+async function refresh() {
+  try {
+    const d = await api('/api/autopilot/bankroll');
+    render(d);
+  } catch (e) {
+    $('kpiStrip').innerHTML = kpi('Error', esc(e.message), 'down');
+    $('metaChips').innerHTML = '<span class="off">Sign in at /account</span>';
+  }
+}
+
+document.querySelectorAll('.cmd-nav button').forEach(btn => {
+  btn.onclick = () => setView(btn.dataset.view);
+});
+document.querySelectorAll('#heatMode button').forEach(btn => {
+  btn.onclick = () => {
+    heatMode = btn.dataset.mode;
+    document.querySelectorAll('#heatMode button').forEach(b => b.classList.toggle('active', b === btn));
+    renderHeatmap();
+  };
+});
+
+window.addEventListener('resize', () => { if (data) drawEquity(data.equity_curve); });
+
+refresh();
+setInterval(refresh, 5000);
+</script>
+</body>
+</html>

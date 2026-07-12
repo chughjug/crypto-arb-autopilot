@@ -35,6 +35,7 @@ PAGES = {
     "/cryptoarbitrage": WEB / "cryptoarbitrage.html",
     "/bots": WEB / "bots.html",
     "/autopilot": WEB / "autopilot.html",
+    "/bankroll": WEB / "bankroll.html",
     "/account": WEB / "account.html",
     "/market": WEB / "market.html",
 }
@@ -290,6 +291,24 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(200, {"user": user}, extra)
             return
 
+        if path == "/api/auth/2fa/qr":
+            qs = parse_qs(parsed.query)
+            uri = (qs.get("data") or [""])[0]
+            if not uri.startswith("otpauth://"):
+                self._send(400, b"invalid otpauth uri")
+                return
+            try:
+                import io
+
+                import segno
+
+                buf = io.BytesIO()
+                segno.make(uri).save(buf, kind="png", scale=6, border=2)
+                self._send(200, buf.getvalue(), "image/png", [("Cache-Control", "no-store")])
+            except Exception:
+                self._send(500, b"qr generation failed")
+            return
+
         if path == "/api/autopilot/strategies":
             import autopilot_engine
             self._send_json(200, {"strategies": autopilot_engine.strategy_catalog()})
@@ -311,6 +330,15 @@ class Handler(BaseHTTPRequestHandler):
                 return
             import autopilot_store
             self._send_json(200, {"logs": autopilot_store.recent_logs(user["id"])}, extra)
+            return
+
+        if path == "/api/autopilot/bankroll":
+            user, _, extra = self._current_user()
+            if not user or user.get("is_guest"):
+                self._send_json(401, {"error": "sign in required"}, extra)
+                return
+            import autopilot_bankroll
+            self._send_json(200, autopilot_bankroll.bankroll_payload(user["id"]), extra)
             return
 
         # HTML pages

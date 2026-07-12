@@ -8,10 +8,11 @@
     arb:       { href: "/cryptoarbitrage", label: "Arb scanner", match: p => p.startsWith("/cryptoarbitrage") || p === "/cryptoarb" },
     bots:      { href: "/bots", label: "Bots", match: p => p === "/bots" },
     autopilot: { href: "/autopilot", label: "Autopilot", match: p => p === "/autopilot" },
+    bankroll:  { href: "/bankroll", label: "Bankroll", match: p => p === "/bankroll" },
     account:   { href: "/account", label: "Account", match: p => p === "/account" },
   };
 
-  const PRIMARY = [N.markets, N.arb, N.bots, N.autopilot];
+  const PRIMARY = [N.markets, N.arb, N.bots, N.autopilot, N.bankroll];
 
   const SECTIONS = [
     {
