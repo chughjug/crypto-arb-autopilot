@@ -32,11 +32,17 @@ def strategy_catalog() -> list[dict]:
             "risk_score": tech.get("risk_score"),
             "variance": tech.get("variance", ""),
             "spread_response": tech.get("spread_response", ""),
+            "formula": tech.get("formula", ""),
+            "failure_mode": tech.get("failure_mode", ""),
             "family": tech.get("family", ""),
             "max_strike_gap_pct": round(float(meta.get("max_strike_gap", 0)) * 100, 3),
             "max_exposure_pct": round(float(meta.get("max_exposure_pct", 0)) * 100, 1),
             "max_bet_pct": round(float(meta.get("max_bet_pct", 0)) * 100, 1) if meta.get("max_bet_pct") else None,
             "min_edge_cents": round(float(meta.get("min_edge", 0)) * 100, 2),
+            "kelly_frac": meta.get("kelly_frac"),
+            "flat_contracts": meta.get("flat_contracts"),
+            "spread_ref_cents": round(float(meta["spread_ref"]) * 100, 1) if meta.get("spread_ref") else None,
+            "max_positions": meta.get("max_positions"),
         })
     rows.sort(key=lambda r: (r.get("risk_score") or 99, r["label"]))
     return rows
@@ -142,7 +148,9 @@ class AutopilotRunner:
     def _size_trade(self, bot: crypto_arb_bot.ArbBot, opp: dict, bankroll_cents: int, cfg: dict) -> int:
         """Mirror ArbBot entry sizing using configured bankroll."""
         strategy = str(bot.cfg.get("strategy") or "half_kelly")
-        c = bot.cfg
+        c = dict(bot.cfg)
+        overrides = cfg.get("overrides") or {}
+        c.update({k: v for k, v in overrides.items() if v is not None})
         yes_cost = float(opp.get("yes_cost") or 0)
         no_cost = float(opp.get("no_cost") or 0)
         if yes_cost <= 0 or no_cost <= 0:
@@ -171,15 +179,17 @@ class AutopilotRunner:
             exp_ts or now + 3600, now, gap,
         )
 
-    def status(self) -> dict:
+    def status(self, *, include_balances: bool = False) -> dict:
         cfg = self._config()
-        return {
+        out = {
             "config": cfg,
             "stats": dict(self.stats),
-            "venues": autopilot_store.all_venue_status(self.user_id),
-            "balances": autopilot_executor.venue_balances(self.user_id),
+            "venues": autopilot_store.all_venue_status_light(self.user_id),
             "thread_alive": bool(self._thread and self._thread.is_alive()),
         }
+        if include_balances:
+            out["balances"] = autopilot_executor.venue_balances(self.user_id)
+        return out
 
 
 def get_runner(user_id: str) -> AutopilotRunner:

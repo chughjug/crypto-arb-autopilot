@@ -333,7 +333,30 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json(401, {"error": "sign in required"}, extra)
                 return
             import autopilot_engine
-            self._send_json(200, autopilot_engine.get_runner(user["id"]).status(), extra)
+            qs = parse_qs(parsed.query)
+            include_balances = (qs.get("balances") or ["0"])[0].lower() in ("1", "true", "yes")
+            try:
+                payload = autopilot_engine.get_runner(user["id"]).status(
+                    include_balances=include_balances,
+                )
+            except Exception as e:
+                self._send_json(500, {"error": str(e)}, extra)
+                return
+            self._send_json(200, payload, extra)
+            return
+
+        if path == "/api/autopilot/balances":
+            user, _, extra = self._current_user()
+            if not user:
+                self._send_json(401, {"error": "sign in required"}, extra)
+                return
+            import autopilot_executor
+            try:
+                payload = autopilot_executor.venue_balances(user["id"])
+            except Exception as e:
+                self._send_json(500, {"error": str(e)}, extra)
+                return
+            self._send_json(200, payload, extra)
             return
 
         if path == "/api/autopilot/logs":

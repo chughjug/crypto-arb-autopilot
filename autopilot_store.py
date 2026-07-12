@@ -18,6 +18,35 @@ _conn = None
 
 VENUES = ("kalshi", "polymarket", "cryptocom")
 
+# Strategy parameter overrides users may tune per-run, with clamp bounds.
+# Values are stored in engine-native units (dollars / fractions / counts).
+OVERRIDE_LIMITS: dict[str, tuple[float, float]] = {
+    "min_edge": (0.0, 0.50),          # dollars of net edge per contract pair
+    "max_strike_gap": (0.0, 0.05),    # fraction of strike price
+    "max_bet_pct": (0.005, 1.0),      # fraction of bankroll per trade
+    "max_exposure_pct": (0.05, 1.0),  # fraction of bankroll deployed
+    "kelly_frac": (0.05, 1.5),        # Kelly multiplier
+    "flat_contracts": (1, 500),       # contracts per trade (flat_unit)
+}
+_INT_OVERRIDES = ("flat_contracts",)
+
+
+def _clean_overrides(raw: Any) -> dict:
+    if not isinstance(raw, dict):
+        return {}
+    out: dict[str, float | int] = {}
+    for key, (lo, hi) in OVERRIDE_LIMITS.items():
+        val = raw.get(key)
+        if val is None or val == "":
+            continue
+        try:
+            num = float(val)
+        except (TypeError, ValueError):
+            continue
+        num = min(hi, max(lo, num))
+        out[key] = int(num) if key in _INT_OVERRIDES else num
+    return out
+
 
 def _db_path() -> str:
     default = (
@@ -53,6 +82,7 @@ def _connect():
                     max_exposure_pct REAL,
                     reserve_pct REAL NOT NULL DEFAULT 30,
                     running INTEGER NOT NULL DEFAULT 0,
+                    overrides TEXT,
                     created_at REAL NOT NULL,
                     updated_at REAL NOT NULL
                 );
@@ -90,6 +120,9 @@ def _connect():
             vc_cols = {r["name"] for r in _conn.execute("PRAGMA table_info(venue_credentials)").fetchall()}
             if "key_fingerprint" not in vc_cols:
                 _conn.execute("ALTER TABLE venue_credentials ADD COLUMN key_fingerprint TEXT")
+            cfg_cols = {r["name"] for r in _conn.execute("PRAGMA table_info(autopilot_config)").fetchall()}
+            if "overrides" not in cfg_cols:
+                _conn.execute("ALTER TABLE autopilot_config ADD COLUMN overrides TEXT")
             _conn.commit()
     return _conn
 
@@ -140,6 +173,22 @@ def get_venue_credentials(user_id: str, venue: str) -> dict | None:
     if not row:
         return None
     return _decrypt(user_id, row["enc_payload"])
+
+
+def venue_status_light(user_id: str, venue: str) -> dict:
+    """Connected flag without decrypting credentials (fast for polling)."""
+    with _lock:
+        row = _connect().execute(
+            "SELECT updated_at FROM venue_credentials WHERE user_id=? AND venue=?",
+            (user_id, venue),
+        ).fetchone()
+    if not row:
+        return {"venue": venue, "connected": False}
+    return {"venue": venue, "connected": True, "updated_at": row["updated_at"]}
+
+
+def all_venue_status_light(user_id: str) -> list[dict]:
+    return [venue_status_light(user_id, v) for v in VENUES]
 
 
 def venue_status(user_id: str, venue: str) -> dict:

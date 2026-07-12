@@ -140,7 +140,7 @@ async function api(path, opts) {
 
 function renderVenue(el, v) {
   el.innerHTML = v.connected
-    ? `<span class="ap-chip on">Connected ${v.api_key || v.funder || ''}</span>`
+    ? `<span class="ap-chip on">Connected${v.api_key ? ' ' + v.api_key : ''}</span>`
     : `<span class="ap-chip off">Not connected</span>`;
 }
 
@@ -159,8 +159,24 @@ function renderStrategies() {
   });
 }
 
+async function refreshBalances() {
+  try {
+    const bal = await api('/api/autopilot/balances');
+    $('balances').innerHTML = Object.entries(bal.venues || {}).map(([k, v]) =>
+      `<span class="ap-chip">${k}: ${v.error || (v.cash_cents != null ? '$'+(v.cash_cents/100).toFixed(2) : 'ok')}</span>`
+    ).join('') || '<span class="ap-chip off">No venues connected</span>';
+  } catch (e) {
+    $('balances').innerHTML = `<span class="ap-chip off">${e.message}</span>`;
+  }
+}
+
 async function refresh() {
   try {
+    const me = await fetch('/api/auth/me', { credentials: 'same-origin' }).then(r => r.json());
+    if (!me.user) {
+      $('runState').textContent = 'Sign in required — visit /account';
+      return;
+    }
     const st = await api('/api/autopilot/status');
     const cfg = st.config || {};
     selected = cfg.strategy_id || selected;
@@ -173,17 +189,17 @@ async function refresh() {
       if (v.venue === 'polymarket') renderVenue($('pStatus'), v);
       if (v.venue === 'cryptocom') renderVenue($('ccStatus'), v);
     });
-    const bal = st.balances || {};
-    $('balances').innerHTML = Object.entries(bal.venues || {}).map(([k,v]) =>
-      `<span class="ap-chip">${k}: ${v.error || (v.cash_cents != null ? '$'+(v.cash_cents/100).toFixed(2) : 'ok')}</span>`
-    ).join('');
     const logs = await api('/api/autopilot/logs');
     $('logs').innerHTML = (logs.logs || []).slice(0, 30).map(l =>
       `<div>[${new Date(l.ts*1000).toLocaleTimeString()}] ${l.level}: ${l.message}</div>`
     ).join('') || '<div>—</div>';
     renderStrategies();
+    refreshBalances();
   } catch (e) {
-    $('runState').textContent = 'Sign in required — visit /account first';
+    const msg = String(e.message || e);
+    $('runState').textContent = msg.toLowerCase().includes('sign in')
+      ? 'Sign in required — visit /account'
+      : msg;
   }
 }
 
