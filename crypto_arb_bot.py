@@ -912,7 +912,7 @@ class ArbBot:
         self.equity_curve = []
 
     def _load_from_db(self) -> None:
-        """Load bot state from database."""
+        """Load full bot state from database, restoring positions and trade history."""
         try:
             state = bot_persistence.load_bot_state(self.strategy_id)
             if state:
@@ -924,10 +924,73 @@ class ArbBot:
                 self.total_injected_cents = int(state.get("total_injected_cents", int(round(RELOAD_AMOUNT * 100))))
                 self.lifetime_realized_cents = int(state.get("lifetime_realized_cents", 0))
 
+            # Restore open positions
+            for row in bot_persistence.load_positions(self.strategy_id):
+                pos_data = row.get("data") or {}
+                key = row["id"]
+                self.positions[key] = {
+                    "key": key,
+                    "coin": row["coin"],
+                    "expiry": row["expiry"],
+                    "expiry_ts": float(row.get("expiry_ts") or 0),
+                    "strike": row.get("strike"),
+                    "yes_venue": row.get("yes_venue"),
+                    "no_venue": row.get("no_venue"),
+                    "yes_cost": float(row.get("yes_cost") or 0),
+                    "no_cost": float(row.get("no_cost") or 0),
+                    "contracts": int(row.get("contracts") or 0),
+                    "cost_cents": int(row.get("cost_cents") or 0),
+                    "payout_cents": int(row.get("payout_cents") or 0),
+                    "locked_cents": int(row.get("locked_cents") or 0),
+                    "gap": float(row.get("gap") or 0),
+                    "spread": pos_data.get("spread"),
+                    "entry_ts": float(row.get("entry_ts") or 0),
+                    "venue_details": pos_data.get("venue_details") or {},
+                    "strategy": pos_data.get("strategy") or self.strategy_id,
+                }
+
+            # Restore settled trade history into former_positions
+            for row in bot_persistence.load_trades(self.strategy_id, limit=500):
+                if row.get("status") != "settled":
+                    continue
+                data = row.get("data") or {}
+                self.former_positions.appendleft({
+                    "coin": row.get("coin") or data.get("coin"),
+                    "expiry": row.get("expiry") or data.get("expiry"),
+                    "expiry_ts": data.get("expiry_ts"),
+                    "strike": row.get("strike") or data.get("strike"),
+                    "yes_venue": data.get("yes_venue"),
+                    "no_venue": data.get("no_venue"),
+                    "yes_cost": data.get("yes_cost", 0),
+                    "no_cost": data.get("no_cost", 0),
+                    "yes_strike": data.get("yes_strike"),
+                    "no_strike": data.get("no_strike"),
+                    "contracts": int(row.get("contracts") or data.get("contracts") or 0),
+                    "cost": float(row.get("cost_total") or data.get("cost") or 0),
+                    "payout": data.get("payout", 0),
+                    "pnl": float(row.get("pnl") or 0),
+                    "spot_price": data.get("spot_price"),
+                    "winning_leg": data.get("winning_leg"),
+                    "outcome": data.get("outcome"),
+                    "venue_details": data.get("venue_details") or {},
+                    "spread": row.get("spread") or data.get("spread"),
+                    "gap": data.get("gap"),
+                    "strategy": data.get("strategy") or self.strategy_id,
+                    "entry_ts": row.get("entry_ts") or data.get("entry_ts"),
+                    "settled_at": row.get("settled_at") or data.get("settled_at"),
+                    "price_checked_at": data.get("price_checked_at"),
+                    "settlement_confirmed": data.get("settlement_confirmed", True),
+                    "life": data.get("life", self.life),
+                    "yes_won": data.get("yes_won", False),
+                    "no_won": data.get("no_won", False),
+                    "yes_pnl": data.get("yes_pnl"),
+                    "no_pnl": data.get("no_pnl"),
+                })
+
             self.busts = bot_persistence.load_busts(self.strategy_id)
             self.equity_curve = bot_persistence.load_equity_curve(self.strategy_id)
         except Exception as e:
-            self._log("error", msg="Failed to load from DB", error=str(e))
+            print(f"crypto_arb_bot load_from_db error [{self.strategy_id}]: {e}")
 
     def _bump_skip(self, reasons: dict[str, int], reason: str) -> None:
         reasons[reason] = int(reasons.get(reason) or 0) + 1
