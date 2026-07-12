@@ -330,11 +330,17 @@ def bankroll_payload(user_id: str) -> dict[str, Any]:
     catalog = {row["id"]: row for row in autopilot_engine.strategy_catalog()}
     strategy_meta = catalog.get(strategy_id, {})
 
+    import autopilot_store
+    cc_creds = autopilot_store.get_venue_credentials(user_id, "cryptocom") or {}
+    cc_pin = cc_creds.get("api_secret") or ""
+
     arb_snap = crypto_arb.snapshot()
     scanner = {
         "opportunity_count": len(arb_snap.get("opportunities") or []),
         "stats": arb_snap.get("stats") or {},
         "updated": arb_snap.get("updated"),
+        "opportunities": arb_snap.get("opportunities") or [],
+        "cc_pin": cc_pin,
     }
 
     equity_curve = _equity_curve(executions, bankroll)

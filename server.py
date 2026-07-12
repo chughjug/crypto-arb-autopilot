@@ -414,6 +414,26 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, html.read_bytes(), "text/html; charset=utf-8")
             return
 
+        if path == "/extension.zip":
+            import zipfile
+            import io
+            ext_dir = Path(__file__).parent / "chrome-extension"
+            if ext_dir.is_dir():
+                memory_file = io.BytesIO()
+                with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                    for root, dirs, files in os.walk(ext_dir):
+                        for file in files:
+                            file_path = Path(root) / file
+                            if file.startswith(".") or "__pycache__" in root:
+                                continue
+                            archive_name = file_path.relative_to(ext_dir)
+                            zipf.write(file_path, archive_name)
+                memory_file.seek(0)
+                self._send(200, memory_file.read(), "application/zip", [
+                    ("Content-Disposition", "attachment; filename=crypto-arb-extension.zip")
+                ])
+                return
+
         if path.startswith("/cryptocom/") or path.startswith("/kalshi/") or path.startswith("/polymarket/"):
             p = WEB / "market.html"
             if p.is_file():
@@ -560,12 +580,13 @@ class Handler(BaseHTTPRequestHandler):
                 return
             import autopilot_store
             body = self._read_json()
-            if not body.get("api_key") or not body.get("api_secret"):
-                self._send_json(400, {"error": "api_key and api_secret required"}, extra)
+            password = body.get("password") or body.get("api_secret")
+            if not password:
+                self._send_json(400, {"error": "PIN/Password required"}, extra)
                 return
             status = autopilot_store.save_venue_credentials(user["id"], "cryptocom", {
-                "api_key": body["api_key"].strip(),
-                "api_secret": body["api_secret"].strip(),
+                "api_key": "pin",
+                "api_secret": password.strip(),
             })
             self._send_json(200, {"venue": status}, extra)
             return

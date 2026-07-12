@@ -705,9 +705,8 @@
       <div class="ap-venue-head"><span class="badge cryptocom">Crypto.com</span><button type="button" class="ap-help-btn" data-help="cryptocom" title="How to connect">?</button><span class="spacer"></span><span class="ap-conn" id="ccConn">…</span></div>
       <div class="ap-venue-meta" id="ccMeta"></div>
       <div id="ccForm">
-        <label class="ap-field"><span>Exchange API key</span><input id="ccApiKey" autocomplete="off" /></label>
-        <label class="ap-field"><span>API secret</span><input id="ccSecret" type="password" autocomplete="off" />
-          <span class="hint">Exchange keys (not App) — used for Predict orders.</span></label>
+        <label class="ap-field"><span>Exchange PIN / Password</span><input id="ccPassword" type="password" autocomplete="off" />
+          <span class="hint">Your 6-digit transaction PIN — used by the extension to execute orders.</span></label>
         <button class="btn sm" id="ccConnect">Connect Crypto.com</button>
       </div>
       <div class="ap-row" id="ccActions" hidden>
@@ -1614,7 +1613,7 @@ $('pConnect').onclick = () => {
   connectVenue('p', '/api/autopilot/connect/polymarket', body);
 };
 $('ccConnect').onclick = () => connectVenue('cc', '/api/autopilot/connect/cryptocom', {
-  api_key: $('ccApiKey').value, api_secret: $('ccSecret').value,
+  password: $('ccPassword').value,
 });
 
 document.querySelectorAll('[data-edit]').forEach(btn => {

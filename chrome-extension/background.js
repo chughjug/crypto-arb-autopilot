@@ -105,7 +105,7 @@ async function poll() {
   });
 
   if (!isExecuting) {
-    executeArb(best, conf);
+    executeArb(best, conf, data?.scanner?.cc_pin);
   } else {
     log('Skipping — already executing another trade');
   }
@@ -120,7 +120,7 @@ function fmtTtl(s) {
 
 // ── Execution orchestration ────────────────────────────────────────────────
 
-async function executeArb(opp, conf) {
+async function executeArb(opp, conf, ccPin) {
   isExecuting = true;
   badge('…', '#6366f1');
 
@@ -137,11 +137,11 @@ async function executeArb(opp, conf) {
       return;
     }
 
-    const eventUrl = `https://web.crypto.com/explore/predict/events/${slug}`;
+    const pin = String(ccPin || conf.cryptoPin || '');
+    const eventUrl = `${conf.appUrl.replace(/\/$/, '')}/cryptocom/${slug}`;
     const targetStrike = opp[cryptoSide === 'yes' ? 'yes_strike' : 'no_strike'] ?? opp.strike;
     const targetPrice = cryptoSide === 'yes' ? opp.yes_cost : opp.no_cost;
     const quantity = Number(conf.defaultQty) || 10;
-    const pin = String(conf.cryptoPin || '');
 
     pendingTrade = {
       side: cryptoSide,
@@ -262,3 +262,22 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.runtime.onStartup.addListener(() => {
   chrome.alarms.create(POLL_ALARM, { periodInMinutes: POLL_INTERVAL_MINUTES });
 });
+
+// Intercept tab loads for /cryptocom/<id> and redirect them directly
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.url && changeInfo.url.includes('/cryptocom/')) {
+    const match = changeInfo.url.match(/\/cryptocom\/([a-zA-Z0-9\-]+)/);
+    if (match) {
+      const id = match[1];
+      let search = '';
+      try {
+        const urlObj = new URL(changeInfo.url);
+        search = urlObj.search || '';
+      } catch (e) {}
+      const realUrl = `https://web.crypto.com/hub/predict/events/details/${id}${search}`;
+      log(`Intercepted /cryptocom/${id} -> redirecting to ${realUrl}`);
+      chrome.tabs.update(tabId, { url: realUrl });
+    }
+  }
+});
+

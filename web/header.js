@@ -80,15 +80,20 @@
 
   function shellHtml(path, user) {
     const primary = primaryNav(path, user);
+    const extLink = `<a href="/extension.zip" class="nav-link" style="display:inline-flex;align-items:center;gap:4px;color:var(--emerald)" download>⚡ Extension</a>`;
     const drawerItems = user ? PRIMARY : PRIMARY.filter(n => n.href !== "/autopilot");
     const drawer = drawerItems.map(n => navItem(n, path)).join("")
+      + extLink
       + navItem(N.account, path);
     return `<div class="app-nav-inner">
         <a href="/crypto" class="nav-logo" aria-label="Crypto Arb home">
           <img src="/logo.png" alt="" class="nav-logo-img" width="36" height="36" />
         </a>
         <div class="nav-explore">
-          <nav class="nav-links nav-desktop" aria-label="Primary">${primary}</nav>
+          <nav class="nav-links nav-desktop" aria-label="Primary">
+            ${primary}
+            ${extLink}
+          </nav>
         </div>
         <div class="nav-right nav-desktop">${accountHtml(user)}</div>
         <button type="button" class="menu-btn nav-mobile" aria-expanded="false" aria-controls="navDrawer">Menu</button>
