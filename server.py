@@ -328,12 +328,13 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(200, p.read_bytes(), "text/html; charset=utf-8")
                 return
 
-        if path in STATIC_JS:
-            rel = path.lstrip("/")
+        if path in STATIC_JS or path.split("?")[0] in STATIC_JS:
+            rel = path.lstrip("/").split("?")[0]
             ctype = "text/css; charset=utf-8" if rel.endswith(".css") else "application/javascript; charset=utf-8"
             if rel == "manifest.json":
                 ctype = "application/manifest+json; charset=utf-8"
-            self._serve_file(WEB / rel, ctype, max_age=3600)
+            cache = 0 if rel in ("header.js", "account.js") else 3600
+            self._serve_file(WEB / rel, ctype, max_age=cache)
             return
 
         if path in STATIC_IMG:
