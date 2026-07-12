@@ -1,0 +1,47 @@
+{
+  "manifest_version": 3,
+  "name": "CryptoArb — Crypto.com Auto-Trader",
+  "version": "1.0.0",
+  "description": "Automatically executes crypto.com Predict arb trades when signaled by your autopilot dashboard.",
+
+  "permissions": [
+    "storage",
+    "tabs",
+    "notifications",
+    "alarms",
+    "scripting"
+  ],
+
+  "host_permissions": [
+    "https://web.crypto.com/*",
+    "https://*.herokuapp.com/*",
+    "http://localhost:*/*"
+  ],
+
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["https://web.crypto.com/hub/predict/events/details/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png"
+    }
+  },
+
+  "icons": {
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png"
+  }
+}

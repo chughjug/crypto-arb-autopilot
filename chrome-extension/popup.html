@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CryptoArb Trader</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --surface-2: #334155;
+    --border: #475569;
+    --ink: #f1f5f9;
+    --ink-2: #94a3b8;
+    --emerald: #10b981;
+    --emerald-bg: rgba(16,185,129,.1);
+    --red: #ef4444;
+    --red-bg: rgba(239,68,68,.08);
+    --indigo: #6366f1;
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+    font-size: 13px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    width: 340px;
+    background: var(--bg);
+    color: var(--ink);
+    padding: 16px;
+  }
+
+  /* Header */
+  .header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+    padding-bottom: 14px; border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: linear-gradient(135deg, #059669, #6366f1);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .header-text h1 { font-size: 14px; font-weight: 800; letter-spacing: -.3px; }
+  .header-text p { font-size: 11px; color: var(--ink-2); margin-top: 1px; }
+
+  /* Status pill */
+  .status-row { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 11px; border-radius: 999px; font-size: 11px; font-weight: 700;
+    border: 1px solid transparent;
+  }
+  .status-pill.armed {
+    background: var(--emerald-bg); border-color: rgba(16,185,129,.3); color: #34d399;
+  }
+  .status-pill.disarmed {
+    background: rgba(148,163,184,.08); border-color: var(--border); color: var(--ink-2);
+  }
+  .status-pill.executing {
+    background: rgba(99,102,241,.1); border-color: rgba(99,102,241,.3); color: #818cf8;
+    animation: pulse 1.2s ease infinite;
+  }
+  .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: currentColor;
+  }
+  .status-pill.armed .dot { animation: blink 1.5s ease infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.6} }
+
+  /* Master toggle */
+  .toggle-row {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 11px 13px; margin-bottom: 14px;
+  }
+  .toggle-label { font-weight: 700; font-size: 12.5px; }
+  .toggle-sub { font-size: 10.5px; color: var(--ink-2); margin-top: 1px; }
+  .switch { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider {
+    position: absolute; inset: 0; cursor: pointer;
+    background: var(--surface-2); border-radius: 999px; transition: .2s;
+  }
+  .slider:before {
+    content: ''; position: absolute;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: #fff; left: 3px; bottom: 3px; transition: .2s;
+  }
+  input:checked + .slider { background: var(--emerald); }
+  input:checked + .slider:before { transform: translateX(18px); }
+
+  /* Fields */
+  .section-label {
+    font-size: 10px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: .6px; color: var(--ink-2); margin-bottom: 8px;
+  }
+  .field-group { margin-bottom: 14px; }
+  .field {
+    display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px;
+  }
+  .field label {
+    font-size: 10.5px; font-weight: 700; color: var(--ink-2); text-transform: uppercase;
+    letter-spacing: .4px;
+  }
+  .field input {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 7px; padding: 8px 10px; color: var(--ink);
+    font: inherit; font-size: 12.5px; transition: border-color .15s;
+    width: 100%;
+  }
+  .field input:focus {
+    outline: none; border-color: var(--indigo);
+    box-shadow: 0 0 0 2px rgba(99,102,241,.2);
+  }
+  .field input[type="password"] { letter-spacing: 2px; }
+  .field .hint { font-size: 10px; color: var(--ink-2); margin-top: 2px; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  /* PIN display */
+  .pin-dots {
+    display: flex; gap: 6px; margin-top: 4px;
+  }
+  .pin-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--border);
+  }
+  .pin-dot.filled { background: var(--emerald); }
+
+  /* Buttons */
+  .btn-row { display: flex; gap: 8px; margin-bottom: 14px; }
+  .btn {
+    flex: 1; padding: 9px; border: none; border-radius: 8px;
+    font: inherit; font-size: 12.5px; font-weight: 700;
+    cursor: pointer; transition: opacity .12s;
+  }
+  .btn:hover { opacity: .88; }
+  .btn.primary { background: var(--emerald); color: #fff; }
+  .btn.secondary { background: var(--surface-2); color: var(--ink); }
+  .btn.danger { background: var(--red); color: #fff; }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  /* Log */
+  .log-section { border-top: 1px solid var(--border); padding-top: 12px; }
+  .log-title {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .log-title span { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing:.5px; color: var(--ink-2); }
+  .log-clear { font-size: 10px; color: var(--ink-2); background: none; border: none; cursor: pointer; }
+  .log-clear:hover { color: var(--ink); }
+  .log-list {
+    max-height: 120px; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .log-entry {
+    font-size: 10.5px; padding: 5px 8px;
+    background: var(--surface); border-radius: 5px;
+    border-left: 2px solid var(--border);
+    display: flex; gap: 6px;
+  }
+  .log-entry.ok { border-color: var(--emerald); }
+  .log-entry.err { border-color: var(--red); }
+  .log-entry.info { border-color: var(--indigo); }
+  .log-ts { color: var(--ink-2); flex-shrink: 0; }
+  .log-msg { color: var(--ink); line-break: anywhere; }
+  .log-empty { font-size: 11px; color: var(--ink-2); text-align: center; padding: 12px 0; font-style: italic; }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 12px; left: 12px; right: 12px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 9px 12px; font-size: 11.5px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.4);
+    animation: slide-up .2s ease;
+  }
+  .toast.ok { border-color: var(--emerald); color: #34d399; }
+  .toast.err { border-color: var(--red); color: #fca5a5; }
+  @keyframes slide-up { from{transform:translateY(10px);opacity:0} to{transform:translateY(0);opacity:1} }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">⚡</div>
+  <div class="header-text">
+    <h1>CryptoArb Trader</h1>
+    <p>Crypto.com auto-executor</p>
+  </div>
+</div>
+
+<div class="status-row">
+  <span class="status-pill disarmed" id="statusPill">
+    <span class="dot"></span>
+    <span id="statusText">Disarmed</span>
+  </span>
+  <span id="lastPollText" style="font-size:10px;color:var(--ink-2);margin-left:auto"></span>
+</div>
+
+<div class="toggle-row">
+  <div>
+    <div class="toggle-label">Auto-execute</div>
+    <div class="toggle-sub">Arm to trade automatically on new arbs</div>
+  </div>
+  <label class="switch">
+    <input type="checkbox" id="autoExecuteToggle">
+    <span class="slider"></span>
+  </label>
+</div>
+
+<!-- App connection -->
+<div class="field-group">
+  <div class="section-label">Dashboard connection</div>
+  <div class="field">
+    <label>App URL</label>
+    <input type="url" id="appUrl" placeholder="https://your-app.herokuapp.com">
+    <span class="hint">Your crypto-arb-app Heroku or localhost URL</span>
+  </div>
+  <div class="field">
+    <label>Session token</label>
+    <input type="password" id="sessionToken" placeholder="Paste from browser cookies">
+    <span class="hint">Copy the <code style="background:var(--surface-2);padding:1px 4px;border-radius:3px">session</code> cookie value from your dashboard</span>
+  </div>
+</div>
+
+<!-- Trade settings -->
+<div class="field-group">
+  <div class="section-label">Trade settings</div>
+  <div class="field-row">
+    <div class="field">
+      <label>Default qty</label>
+      <input type="number" id="defaultQty" placeholder="10" min="1" step="1">
+    </div>
+    <div class="field">
+      <label>Min edge (¢)</label>
+      <input type="number" id="minEdgeCents" placeholder="2" min="0" step="0.5">
+    </div>
+  </div>
+</div>
+
+<!-- Crypto.com PIN -->
+<div class="field-group">
+  <div class="section-label">Crypto.com PIN</div>
+  <div class="field">
+    <label>6-digit transaction PIN</label>
+    <input type="password" id="cryptoPin" placeholder="••••••" maxlength="6" autocomplete="off" inputmode="numeric">
+    <span class="hint">Set in Crypto.com → Account → Security → Transaction PIN</span>
+  </div>
+  <div class="pin-dots" id="pinDots">
+    <div class="pin-dot" id="pd0"></div>
+    <div class="pin-dot" id="pd1"></div>
+    <div class="pin-dot" id="pd2"></div>
+    <div class="pin-dot" id="pd3"></div>
+    <div class="pin-dot" id="pd4"></div>
+    <div class="pin-dot" id="pd5"></div>
+  </div>
+</div>
+
+<div class="btn-row">
+  <button class="btn secondary" id="testPollBtn">🔍 Poll now</button>
+  <button class="btn primary" id="saveBtn">💾 Save</button>
+</div>
+
+<div class="log-section">
+  <div class="log-title">
+    <span>Execution log</span>
+    <button class="log-clear" id="clearLogBtn">Clear</button>
+  </div>
+  <div class="log-list" id="logList">
+    <div class="log-empty">No activity yet</div>
+  </div>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>

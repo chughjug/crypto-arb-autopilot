@@ -21,7 +21,7 @@ POLY_EVENTS = "https://gamma-api.polymarket.com/events"
 # Reached through the web app's public proxy. asset_type=sports = game matchups /
 # league futures; asset_type=predicts = the Events tab (crypto price, politics).
 CRYPTOCOM_PREDICT_BASE = "https://web.crypto.com/api/proxy/public/knock-out/predictions/public/api"
-CRYPTOCOM_EVENT_URL = "https://web.crypto.com/explore/predict/events/{slug}"
+CRYPTOCOM_EVENT_URL = "https://web.crypto.com/hub/predict/events/details/{id}"
 CRYPTOCOM_ASSET_TYPES = [s.strip() for s in os.environ.get(
     "CRYPTOCOM_ASSET_TYPES", "sports,predicts").split(",") if s.strip()]
 CRYPTOCOM_PAGE = int(os.environ.get("CRYPTOCOM_PAGE_SIZE", "100"))
@@ -350,7 +350,7 @@ def normalize_cryptocom_event(ev: dict, contracts: list[dict]) -> dict | None:
         "category": category,
         "volume": 0,   # the public Predict API exposes no volume/open-interest
         "ticker": slug,
-        "url": CRYPTOCOM_EVENT_URL.format(slug=slug),
+        "url": CRYPTOCOM_EVENT_URL.format(id=eid),
         "image": image,
         "markets": markets,
         "end_date": ev.get("close_date") or ev.get("event_date"),
