@@ -14,7 +14,7 @@
   const strk = v => v >= 100 ? '$' + Number(v).toLocaleString(undefined, {maximumFractionDigits: 0})
     : '$' + Number(v).toLocaleString(undefined, {maximumFractionDigits: 4});
   const VLABEL = {cryptocom: 'crypto.com', kalshi: 'Kalshi', polymarket: 'Polymarket'};
-  const ccEventUrl = slug => slug ? 'https://web.crypto.com/explore/predict/events/' + encodeURIComponent(slug) : null;
+  const ccEventUrl = slug => slug ? '/cryptocom/' + encodeURIComponent(slug) : null;
   const venueLink = (v, pv, cls) => {
     const c = cls ? ' ' + cls : '';
     if (!pv) return '<span class="v-cost' + c + ' ' + v + '">' + (VLABEL[v] || v) + '</span>';

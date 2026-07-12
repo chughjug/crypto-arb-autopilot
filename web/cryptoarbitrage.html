@@ -374,7 +374,7 @@ const esc = s => (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;
 const tradeKey = (coin, expiry, strike) => coin+'|'+expiry+'|'+Number(strike).toFixed(4);
 
 const VLABEL = {cryptocom:'crypto.com', kalshi:'Kalshi', polymarket:'Polymarket'};
-const ccEventUrl = slug => slug ? 'https://web.crypto.com/explore/predict/events/' + encodeURIComponent(slug) : null;
+const ccEventUrl = slug => slug ? '/cryptocom/' + encodeURIComponent(slug) : null;
 const venueLink = (v, pv, cls) => {
   const c = cls ? ' '+cls : '';
   if(!pv) return '<span class="v-cost'+c+' '+v+'">'+(VLABEL[v]||v)+'</span>';
@@ -410,9 +410,7 @@ function oppBreakdown(r){
   const yc = r.yes_cost, nc = r.no_cost;
   if(yc==null||nc==null) return '';
   const sum = yc+nc;
-  return '<div class="ca-opp-break"><span class="v-cost '+r.yes_venue+'">'+VLABEL[r.yes_venue]+' YES</span> $'+yc.toFixed(2)+
-    ' + <span class="v-cost '+r.no_venue+'">'+VLABEL[r.no_venue]+' NO</span> $'+nc.toFixed(2)+
-    ' = <b>$'+sum.toFixed(2)</b><div class="lock-line">→ lock $'+r.max_arb.toFixed(2)+' per contract</div></div>';
+    ' = <b>$'+sum.toFixed(2)+'</b><div class="lock-line">→ lock $'+r.max_arb.toFixed(2)+' per contract</div></div>';
 }
 
 function copyText(txt, btn){
