@@ -36,10 +36,26 @@
 .ap-hstat { padding: 11px 14px; border-radius: var(--radius-sm); background: var(--surface-2); border: 1px solid var(--border); }
 .ap-hstat b { display: block; font-size: 18px; font-weight: 800; letter-spacing: -.4px; font-variant-numeric: tabular-nums; }
 .ap-hstat span { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--muted-2); }
-.ap-live-warn {
+/* mode toggle */
+.ap-mode { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ap-mode-lock { font-size: 11.5px; font-weight: 700; color: var(--muted-2); }
+#modeSeg button[data-mode="1"].on { color: #b45309; }
+#modeSeg button.locked { opacity: .4; cursor: not-allowed; }
+#modeSeg button.locked:hover { color: var(--muted); }
+/* mode banner — always visible, states the active mode plainly */
+.ap-mode-banner {
   margin-top: 12px; padding: 10px 14px; border-radius: var(--radius-sm);
-  background: var(--amber-bg); border: 1px solid var(--amber-border); color: var(--amber-text); font-size: 12.5px;
+  font-size: 12.5px; display: flex; align-items: center; gap: 10px;
+  border: 1px solid var(--border); background: var(--surface-2); color: var(--muted);
 }
+.ap-mode-banner .tag {
+  flex: none; font-size: 10.5px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: .5px; padding: 3px 10px; border-radius: 999px;
+}
+.ap-mode-banner.paper .tag { background: var(--emerald-bg); color: #065f46; border: 1px solid var(--emerald-border); }
+.ap-mode-banner.live { background: var(--amber-bg); border-color: var(--amber-border); color: var(--amber-text); }
+.ap-mode-banner.live .tag { background: #b45309; color: #fff; }
+.ap-mode-banner b { font-weight: 800; }
 
 /* venues */
 .ap-venues { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 14px; margin-top: 14px; }
@@ -635,18 +651,19 @@
   <section class="card ap-hero">
     <div class="card-pad">
       <div class="ap-hero-top">
-        <div class="seg" id="modeSeg">
-          <button type="button" data-mode="0" class="on">Paper / demo</button>
-          <button type="button" data-mode="1">Live orders</button>
+        <div class="ap-mode">
+          <div class="seg" id="modeSeg">
+            <button type="button" data-mode="0" class="on">Paper / demo</button>
+            <button type="button" data-mode="1">Live orders</button>
+          </div>
+          <span class="ap-mode-lock" id="modeLock" hidden>🔒 Link 2 venues to enable live</span>
         </div>
         <div class="spacer"></div>
         <button class="btn ghost sm" id="saveBtn">Save settings</button>
         <button class="btn sm" id="startBtn">▶ Start autopilot</button>
         <button class="btn danger sm" id="stopBtn">■ Stop</button>
       </div>
-      <div class="ap-live-warn" id="liveWarn" hidden>
-        <b>Live mode</b> places real orders with real funds on every venue a trade needs. Start in Kalshi <b>demo</b> + paper mode until you have verified fills, balances, and strategy behavior.
-      </div>
+      <div class="ap-mode-banner paper" id="modeBanner"></div>
       <div class="ap-check" id="checklist"></div>
       <div class="ap-hero-stats" id="heroStats"></div>
     </div>
@@ -1332,7 +1349,41 @@ function checkItem(state, text) {
   return `<span class="ap-check-item ${state}"><span class="ic">${ic}</span>${text}</span>`;
 }
 
+function renderModeBanner() {
+  const b = $('modeBanner');
+  if (!b) return;
+  if (liveMode) {
+    b.className = 'ap-mode-banner live';
+    b.innerHTML = '<span class="tag">● Live</span><span><b>Live orders.</b> Real funds are committed on every venue a trade needs — verify balances and demo fills first.</span>';
+  } else {
+    b.className = 'ap-mode-banner paper';
+    b.innerHTML = '<span class="tag">Paper</span><span><b>Paper / demo.</b> Trades are simulated for recommendations — no real orders and no real funds.</span>';
+  }
+}
+
+// Live orders require ≥2 linked venues (an arb always spans two). Lock the
+// Live toggle until they exist, and fall back to Paper if they disappear.
+function renderModeToggle() {
+  const connected = venues.filter(v => v.connected).length;
+  const canLive = connected >= 2;
+  const liveBtn = $('modeSeg').querySelector('button[data-mode="1"]');
+  liveBtn.disabled = !canLive;
+  liveBtn.classList.toggle('locked', !canLive);
+  liveBtn.title = canLive
+    ? 'Place real orders on linked venues'
+    : 'Link at least 2 venues to enable live trading';
+  $('modeLock').hidden = canLive;
+  if (!canLive && liveMode) {
+    liveMode = false;
+    $('modeSeg').querySelectorAll('button').forEach(b =>
+      b.classList.toggle('on', b.dataset.mode === '0'));
+    markDirty();
+  }
+  renderModeBanner();
+}
+
 function renderChecklist() {
+  renderModeToggle();
   const connected = venues.filter(v => v.connected).length;
   const s = strategies.find(x => x.id === selected);
   const bank = parseFloat($('bankroll').value) || 0;
@@ -1502,7 +1553,7 @@ function applyConfig(c) {
     $('reserve').value = c.reserve_pct ?? 30;
     $('modeSeg').querySelectorAll('button').forEach(b =>
       b.classList.toggle('on', b.dataset.mode === (liveMode ? '1' : '0')));
-    $('liveWarn').hidden = !liveMode;
+    renderModeToggle();
   }
   renderRunState(c.running);
 }
@@ -1561,9 +1612,9 @@ $('stopBtn').onclick = async () => {
 
 $('modeSeg').querySelectorAll('button').forEach(btn => {
   btn.onclick = () => {
+    if (btn.disabled || btn.classList.contains('locked')) return;
     liveMode = btn.dataset.mode === '1';
     $('modeSeg').querySelectorAll('button').forEach(b => b.classList.toggle('on', b === btn));
-    $('liveWarn').hidden = !liveMode;
     markDirty(); renderChecklist(); renderRunState(cfg.running);
   };
 });

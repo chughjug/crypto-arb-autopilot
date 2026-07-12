@@ -115,7 +115,10 @@ class AutopilotRunner:
         snap = crypto_arb.snapshot()
         opps = list(snap.get("opportunities") or [])
         opps = crypto_arb_bot._filter_opps_for_strategy(strategy_id, opps)
-        opps = autopilot_executor.filter_opportunities(self.user_id, opps)
+        # Only live mode needs linked venue credentials; paper mode simulates
+        # every candidate so the autopilot still recommends trades unlinked.
+        if live_mode:
+            opps = autopilot_executor.filter_opportunities(self.user_id, opps)
 
         self.stats["cycles"] += 1
         self.stats["last_at"] = time.time()
@@ -123,7 +126,7 @@ class AutopilotRunner:
         if not opps:
             return {"opportunities": 0}
 
-        balances = autopilot_executor.venue_balances(self.user_id)
+        balances = autopilot_executor.venue_balances(self.user_id) if live_mode else {}
         bankroll_cents = int(float(cfg.get("bankroll_usd") or 300) * 100)
 
         for opp in opps:
@@ -131,11 +134,12 @@ class AutopilotRunner:
             n = self._size_trade(bot, opp, bankroll_cents, cfg)
             if n < 1:
                 continue
-            ok_exec, reason = autopilot_executor.can_execute(self.user_id, opp)
-            if not ok_exec:
-                continue
-            if live_mode and not balances.get("ready"):
-                continue
+            if live_mode:
+                ok_exec, reason = autopilot_executor.can_execute(self.user_id, opp)
+                if not ok_exec:
+                    continue
+                if not balances.get("ready"):
+                    continue
             result = autopilot_executor.execute_opportunity(
                 self.user_id, opp, contracts=n, live_mode=live_mode
             )

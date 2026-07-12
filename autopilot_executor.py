@@ -116,6 +116,46 @@ def _cryptocom_leg(user_id: str, side: str, opp: dict, per_venue: dict, live_mod
     return {"error": "Crypto.com passcode not configured"}
 
 
+def _paper_execute(user_id: str, opp: dict, contracts: int, arb_id: str) -> dict[str, Any]:
+    """Simulate YES/NO legs without credentials or live venue calls."""
+    yes_cost = float(opp.get("yes_cost") or 0)
+    no_cost = float(opp.get("no_cost") or 0)
+    legs: dict[str, Any] = {}
+    for side, venue_key, price in (
+        ("yes", opp.get("yes_venue"), yes_cost),
+        ("no", opp.get("no_venue"), no_cost),
+    ):
+        if not venue_key:
+            continue
+        legs[f"{venue_key}_{side}"] = {
+            "paper": True,
+            "venue": venue_key,
+            "side": side,
+            "price": price,
+            "count": contracts,
+        }
+    result = {
+        "arb_id": arb_id,
+        "ts": time.time(),
+        "ok": True,
+        "errors": [],
+        "legs": legs,
+        "contracts": contracts,
+        "live_mode": False,
+        "coin": opp.get("coin"),
+        "expiry": opp.get("expiry"),
+        "edge": opp.get("max_arb"),
+    }
+    autopilot_store.append_log(
+        user_id, "info", f"Paper arb {opp.get('coin')} x{contracts}", result
+    )
+    try:
+        autopilot_store.save_trade(user_id, result)
+    except Exception:
+        log.exception("save_trade failed user=%s", user_id)
+    return result
+
+
 def execute_opportunity(
     user_id: str,
     opp: dict,
@@ -125,6 +165,9 @@ def execute_opportunity(
 ) -> dict[str, Any]:
     """Place YES/NO legs for a crypto_arb opportunity."""
     arb_id = uuid.uuid4().hex[:12]
+    if not live_mode:
+        return _paper_execute(user_id, opp, contracts, arb_id)
+
     ok, reason = can_execute(user_id, opp)
     if not ok:
         return {"arb_id": arb_id, "ok": False, "error": reason}
