@@ -133,6 +133,15 @@
 .ap-split-legend b { color: var(--ink); }
 
 /* activity */
+.ap-activity-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 14px; align-items: start; }
+.ap-act-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.ap-act-head h4, .ap-act-title { margin: 0; font-size: 13px; font-weight: 800; }
+.ap-act-head .apl-sum { margin-left: auto; }
+.ap-act-title { margin-bottom: 10px; }
+.ap-act-title:not(:first-child) { margin-top: 4px; }
+.ap-activity-grid .ap-hero-stats { grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); }
+.ap-activity-grid .ap-hstat b { font-size: 15px; }
+@media (max-width: 900px) { .ap-activity-grid { grid-template-columns: 1fr; } }
 .ap-runstats { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
 .ap-chip {
   padding: 5px 11px; border-radius: 999px; font-size: 12px; font-weight: 600;
@@ -306,11 +315,24 @@
   </div>
 
   <!-- ── Activity ────────────────────────────────────────────────── -->
-  <div class="section-head"><h2>Activity</h2><span class="hint">runner health and recent decisions</span></div>
-  <section class="card"><div class="card-pad">
-    <div class="ap-runstats" id="runStats"></div>
-    <div class="ap-log" id="logs"><div>—</div></div>
-  </div></section>
+  <div class="section-head"><h2>Activity</h2><span class="hint">trade ledger, runner health, and the decision log — full analytics on the <a href="/bankroll" style="text-decoration:underline">bankroll dashboard</a></span></div>
+  <div class="ap-activity-grid">
+    <section class="card"><div class="card-pad">
+      <div class="ap-act-head">
+        <h4>Trade ledger</h4>
+        <div class="apl-tabs" id="tlTabs"></div>
+        <span class="apl-sum" id="tlSum">—</span>
+      </div>
+      <div class="apl-list" id="tlList"><div class="apl-empty">Loading…</div></div>
+    </div></section>
+    <section class="card"><div class="card-pad">
+      <h4 class="ap-act-title">Runner health</h4>
+      <div class="ap-runstats" id="runStats"></div>
+      <div class="ap-hero-stats" id="tradeStats" style="margin:0 0 14px"></div>
+      <h4 class="ap-act-title">Decision log</h4>
+      <div class="ap-log" id="logs"><div>—</div></div>
+    </div></section>
+  </div>
 </div>
 
 <div class="ap-savebar" id="saveBar" hidden>
@@ -318,6 +340,7 @@
   <button class="btn" id="saveBarBtn">Save</button>
 </div>
 
+<script src="/ap-ledger.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -642,6 +665,36 @@ function renderLogs(logs) {
     <span>${esc(l.message)}</span></div>`).join('') || '<div>— no activity yet</div>';
 }
 
+/* trade ledger */
+let trades = [], tradeStats = {}, tlFilter = 'all';
+
+function renderLedger() {
+  ApLedger.renderList($('tlList'), trades, tlFilter);
+  $('tlSum').innerHTML = ApLedger.summaryHtml(trades, tradeStats);
+  $('tlTabs').innerHTML = ApLedger.tabsHtml(tlFilter);
+  $('tlTabs').querySelectorAll('.apl-tab').forEach(btn => {
+    btn.onclick = () => { tlFilter = btn.dataset.filter; renderLedger(); };
+  });
+  const ts = tradeStats || {};
+  $('tradeStats').innerHTML = [
+    [String(ts.filled ?? 0), 'Filled'],
+    [String(ts.failed ?? 0), 'Failed'],
+    [ApLedger.pnlFmt(ts.pending_locked_usd ?? 0), 'Pending locked'],
+    [ApLedger.pnlFmt(ts.realized_pnl_usd ?? 0), 'Realized P&L'],
+    [ApLedger.money(ts.deployed_usd ?? 0), 'Deployed'],
+    [`${ts.live_fills ?? 0} / ${ts.paper_fills ?? 0}`, 'Live / paper'],
+  ].map(([v, l]) => `<div class="ap-hstat"><b>${esc(v)}</b><span>${esc(l)}</span></div>`).join('');
+}
+
+async function refreshTrades() {
+  try {
+    const d = await api('/api/autopilot/trades?limit=100');
+    trades = d.trades || [];
+    tradeStats = d.stats || {};
+  } catch (e) { /* keep last known */ }
+  renderLedger();
+}
+
 /* ── data flow ────────────────────────────────────────────────── */
 function applyConfig(c) {
   cfg = { ...cfg, ...c };
@@ -702,11 +755,11 @@ $('startBtn').onclick = async () => {
     await saveSettings();
     await post('/api/autopilot/start');
     renderRunState(true);
-    refreshStatus(); refreshLogs();
+    refreshStatus(); refreshLogs(); refreshTrades();
   } catch (e) { alert(e.message); }
 };
 $('stopBtn').onclick = async () => {
-  try { await post('/api/autopilot/stop'); renderRunState(false); refreshStatus(); refreshLogs(); }
+  try { await post('/api/autopilot/stop'); renderRunState(false); refreshStatus(); refreshLogs(); refreshTrades(); }
   catch (e) { alert(e.message); }
 };
 
@@ -799,9 +852,10 @@ document.querySelectorAll('[data-disconnect]').forEach(btn => {
 
   await refreshStatus();
   renderList(); renderDetail(); renderBankSplit();
-  refreshBalances(); refreshLogs();
+  refreshBalances(); refreshLogs(); refreshTrades();
   setInterval(refreshStatus, 8000);
   setInterval(refreshLogs, 8000);
+  setInterval(refreshTrades, 10000);
   setInterval(refreshBalances, 30000);
 })();
 </script>

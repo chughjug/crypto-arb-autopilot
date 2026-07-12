@@ -45,7 +45,7 @@ _AUTH_PAGES = {"/autopilot"}
 
 STATIC_JS = {
     "/header.js", "/account.js", "/auth-ui.js", "/live.js", "/viewmode.js", "/market-detail.js",
-    "/bot-ledger.js", "/theme.css", "/bot-panel.css", "/manifest.json",
+    "/bot-ledger.js", "/ap-ledger.js", "/theme.css", "/bot-panel.css", "/manifest.json",
 }
 STATIC_IMG = {
     "/icon-192.png", "/icon-512.png", "/apple-touch-icon.png",

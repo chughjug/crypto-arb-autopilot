@@ -88,6 +88,32 @@ def _parse_execution(detail: dict, log: dict) -> dict | None:
     }
 
 
+def _legs_list(legs) -> list[dict]:
+    """Normalize stored legs (dict keyed by leg name, or list) to a list of dicts."""
+    if isinstance(legs, dict):
+        out = []
+        for key, leg in legs.items():
+            if not isinstance(leg, dict):
+                continue
+            name = str(leg.get("venue") or key)
+            if "kalshi" in name:
+                venue = "kalshi"
+            elif "poly" in name:
+                venue = "polymarket"
+            else:
+                venue = "cryptocom"
+            out.append({
+                "key": key,
+                "venue": venue,
+                "paper": bool(leg.get("paper")),
+                "error": leg.get("error"),
+            })
+        return out
+    if isinstance(legs, list):
+        return [leg for leg in legs if isinstance(leg, dict)]
+    return []
+
+
 def _execution_from_trade(trade: dict) -> dict:
     return {
         "id": trade.get("arb_id") or trade.get("id"),
@@ -103,7 +129,7 @@ def _execution_from_trade(trade: dict) -> dict:
         "live_mode": trade.get("live_mode"),
         "ok": trade.get("ok"),
         "errors": trade.get("errors") or [],
-        "legs": trade.get("legs") or [],
+        "legs": _legs_list(trade.get("legs")),
         "cost_total": trade.get("cost_total"),
         "trade_status": trade.get("status"),
         "pnl": trade.get("pnl"),
