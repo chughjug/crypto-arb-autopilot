@@ -237,6 +237,11 @@ $('stopBtn').onclick = async () => { await api('/api/autopilot/stop', { method: 
 $('riskFilter').onchange = renderStrategies;
 
 (async () => {
+  const me = await fetch('/api/auth/me', { credentials: 'same-origin' }).then(r => r.json()).catch(() => ({}));
+  if (!me.user) {
+    location.replace('/account?signin=1&next=/autopilot');
+    return;
+  }
   const d = await api('/api/autopilot/strategies');
   strategies = d.strategies || [];
   renderStrategies();

@@ -74,9 +74,15 @@
     host.insertAdjacentElement("afterend", bar);
   }
 
+  function primaryNav(path, user) {
+    const items = user ? PRIMARY : PRIMARY.filter(n => n.href !== "/autopilot");
+    return items.map(n => navItem(n, path)).join("");
+  }
+
   function shellHtml(path, user) {
-    const primary = PRIMARY.map(n => navItem(n, path)).join("");
-    const drawer = PRIMARY.map(n => navItem(n, path)).join("")
+    const primary = primaryNav(path, user);
+    const drawerItems = user ? PRIMARY : PRIMARY.filter(n => n.href !== "/autopilot");
+    const drawer = drawerItems.map(n => navItem(n, path)).join("")
       + navItem(N.account, path);
     return `<div class="app-nav-inner">
         <a href="/crypto" class="nav-logo" aria-label="Crypto Arb home">

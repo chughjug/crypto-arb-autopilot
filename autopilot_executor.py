@@ -59,13 +59,37 @@ def venue_balances(user_id: str) -> dict[str, Any]:
     return out
 
 
+def required_venues(opp: dict) -> set[str]:
+    out: set[str] = set()
+    for key in ("yes_venue", "no_venue"):
+        venue = opp.get(key)
+        if venue:
+            out.add(str(venue))
+    return out
+
+
+def connected_venues(user_id: str) -> set[str]:
+    return {
+        venue
+        for venue in autopilot_store.VENUES
+        if autopilot_store.get_venue_credentials(user_id, venue)
+    }
+
+
+def filter_opportunities(user_id: str, opps: list[dict]) -> list[dict]:
+    """Keep only arbs whose YES/NO venues are all linked for this user."""
+    return [opp for opp in opps if can_execute(user_id, opp)[0]]
+
+
 def can_execute(user_id: str, opp: dict) -> tuple[bool, str]:
-    yes_v = opp.get("yes_venue")
-    no_v = opp.get("no_venue")
-    for venue in (yes_v, no_v):
-        if venue in autopilot_store.VENUES:
-            if not autopilot_store.get_venue_credentials(user_id, venue):
-                return False, f"{venue}_not_connected"
+    needed = required_venues(opp)
+    if not needed:
+        return False, "no_venues"
+    for venue in needed:
+        if venue not in autopilot_store.VENUES:
+            return False, f"unsupported_venue:{venue}"
+        if not autopilot_store.get_venue_credentials(user_id, venue):
+            return False, f"{venue}_not_connected"
     return True, "ok"
 
 

@@ -40,6 +40,8 @@ PAGES = {
     "/market": WEB / "market.html",
 }
 
+_AUTH_PAGES = {"/autopilot"}
+
 STATIC_JS = {
     "/header.js", "/account.js", "/auth-ui.js", "/live.js", "/viewmode.js", "/market-detail.js",
     "/bot-ledger.js", "/theme.css", "/bot-panel.css", "/manifest.json",
@@ -86,6 +88,11 @@ class Handler(BaseHTTPRequestHandler):
         if not user:
             return None, token, extra
         return user, token, extra
+
+    def _redirect(self, location: str, code: int = 302) -> None:
+        self.send_response(code)
+        self.send_header("Location", location)
+        self.end_headers()
 
     def _read_json(self) -> dict:
         try:
@@ -312,8 +319,12 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/autopilot/strategies":
+            user, _, extra = self._current_user()
+            if not user:
+                self._send_json(401, {"error": "sign in required"}, extra)
+                return
             import autopilot_engine
-            self._send_json(200, {"strategies": autopilot_engine.strategy_catalog()})
+            self._send_json(200, {"strategies": autopilot_engine.strategy_catalog()}, extra)
             return
 
         if path == "/api/autopilot/status":
@@ -367,6 +378,11 @@ class Handler(BaseHTTPRequestHandler):
             page_key = "/" + path.split("/")[-1].replace(".html", "")
         html = PAGES.get(path) or PAGES.get(page_key)
         if html and html.is_file():
+            if page_key in _AUTH_PAGES:
+                user, _, _ = self._current_user()
+                if not user:
+                    self._redirect("/account?signin=1&next=" + page_key)
+                    return
             self._send(200, html.read_bytes(), "text/html; charset=utf-8")
             return
 

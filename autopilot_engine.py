@@ -109,6 +109,7 @@ class AutopilotRunner:
         snap = crypto_arb.snapshot()
         opps = list(snap.get("opportunities") or [])
         opps = crypto_arb_bot._filter_opps_for_strategy(strategy_id, opps)
+        opps = autopilot_executor.filter_opportunities(self.user_id, opps)
 
         self.stats["cycles"] += 1
         self.stats["last_at"] = time.time()
