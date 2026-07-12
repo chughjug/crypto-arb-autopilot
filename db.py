@@ -151,12 +151,17 @@ def _init_postgres_schema(pool) -> None:
     schema_path = Path(__file__).parent / "supabase_schema.sql"
     if not schema_path.is_file():
         return
-    sql = schema_path.read_text()
+    lines = []
+    for line in schema_path.read_text().splitlines():
+        if line.strip().startswith("--"):
+            continue
+        lines.append(line)
+    sql = "\n".join(lines)
     with pool.connection() as conn:
         with conn.cursor() as cur:
             for stmt in sql.split(";"):
                 stmt = stmt.strip()
-                if stmt and not stmt.startswith("--"):
+                if stmt:
                     cur.execute(stmt)
         conn.commit()
 
