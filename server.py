@@ -395,7 +395,7 @@ class Handler(BaseHTTPRequestHandler):
             }, extra)
             return
 
-        if path == "/bankroll":
+        if path in ("/bankroll", "/bankroll.html"):
             self._redirect("/autopilot?tab=bankroll")
             return
 
