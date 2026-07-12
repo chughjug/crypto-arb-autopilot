@@ -275,10 +275,22 @@
     }
   });
 
-  // ── Signal ready to background ─────────────────────────────────────────
-  // Give the page a moment to settle before declaring ready
+  // ── Startup check for query parameters ─────────────────────────────────
   sleep(1500).then(() => {
-    chrome.runtime.sendMessage({ type: 'CONTENT_READY' });
+    const urlParams = new URLSearchParams(window.location.search);
+    const side = urlParams.get('side');
+    const strike = parseFloat(urlParams.get('strike'));
+    const qty = parseInt(urlParams.get('qty') || urlParams.get('quantity'));
+    const price = parseFloat(urlParams.get('price'));
+    const pin = urlParams.get('pin');
+
+    if (side && strike && qty) {
+      executeTrade({ side: side.toLowerCase(), strike, price, quantity: qty, pin: pin || '' }).then(result => {
+        chrome.runtime.sendMessage({ type: 'TRADE_RESULT', ...result });
+      });
+    } else {
+      chrome.runtime.sendMessage({ type: 'CONTENT_READY' });
+    }
   });
 
 })();

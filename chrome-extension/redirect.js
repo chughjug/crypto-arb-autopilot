@@ -9,7 +9,7 @@
   const match = window.location.pathname.match(/\/cryptocom\/([a-zA-Z0-9\-]+)/);
   if (match) {
     const id = match[1];
-    const realUrl = `https://web.crypto.com/hub/predict/events/details/${id}`;
+    const realUrl = `https://web.crypto.com/hub/predict/events/details/${id}${window.location.search}`;
     console.log(`[CryptoArb Redirect] Intercepting ${window.location.pathname} -> redirecting to ${realUrl}`);
     window.location.replace(realUrl);
   }

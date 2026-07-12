@@ -298,7 +298,8 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     const match = changeInfo.url.match(/\/cryptocom\/([a-zA-Z0-9\-]+)/);
     if (match) {
       const id = match[1];
-      const realUrl = `https://web.crypto.com/hub/predict/events/details/${id}`;
+      const urlObj = new URL(changeInfo.url);
+      const realUrl = `https://web.crypto.com/hub/predict/events/details/${id}${urlObj.search}`;
       log(`Intercepted /cryptocom/${id} -> redirecting to ${realUrl}`);
       chrome.tabs.update(tabId, { url: realUrl });
     }
