@@ -269,6 +269,143 @@
 .bk-panel[hidden] { display: none !important; }
 .bk-panel { margin-top: 0; }
 .bk-panel .section-head:first-child { margin-top: 0; }
+
+/* ── Help / Info Modals ────────────────────────────────────────── */
+.ap-help-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  color: var(--muted-2);
+  font-size: 10px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-left: 8px;
+  vertical-align: middle;
+  transition: all 0.2s ease;
+  padding: 0;
+  line-height: 1;
+}
+.ap-help-btn:hover {
+  background: var(--dark);
+  color: #fff;
+  border-color: var(--dark);
+}
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.modal-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+.modal-card {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 16px;
+  width: 90%;
+  max-width: 520px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.05);
+  transform: translateY(15px);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+.modal-overlay.open .modal-card {
+  transform: translateY(0);
+}
+.modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.modal-header h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink);
+}
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  font-weight: bold;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+}
+.modal-close:hover {
+  color: var(--ink);
+}
+.modal-body {
+  padding: 20px;
+  max-height: 70vh;
+  overflow-y: auto;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+.modal-body h4 {
+  margin: 16px 0 6px;
+  font-size: 11.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--muted-2);
+}
+.modal-body h4:first-of-type {
+  margin-top: 0;
+}
+.modal-body p {
+  margin: 0 0 10px;
+}
+.modal-body ol, .modal-body ul {
+  margin: 0 0 12px;
+  padding-left: 20px;
+}
+.modal-body li {
+  margin-bottom: 5px;
+}
+.modal-body code {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 11px;
+  background: var(--surface-2);
+  padding: 2px 4px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  color: var(--ink);
+}
+.modal-body a {
+  color: var(--brand);
+  text-decoration: underline;
+}
+.modal-body .tip-box {
+  background: rgba(5, 150, 105, 0.05);
+  border: 1px solid rgba(5, 150, 105, 0.2);
+  color: #065f46;
+  padding: 12px 14px;
+  border-radius: 8px;
+  margin-top: 14px;
+  font-size: 12px;
+}
 </style>
 <script src="/viewmode.js"></script>
 </head>
@@ -318,7 +455,7 @@
   <div class="ap-venues">
 
     <section class="card"><div class="card-pad">
-      <div class="ap-venue-head"><span class="badge kalshi">Kalshi</span><span class="spacer"></span><span class="ap-conn" id="kConn">…</span></div>
+      <div class="ap-venue-head"><span class="badge kalshi">Kalshi</span><button type="button" class="ap-help-btn" data-help="kalshi" title="How to connect">?</button><span class="spacer"></span><span class="ap-conn" id="kConn">…</span></div>
       <div class="ap-venue-meta" id="kMeta"></div>
       <div id="kForm">
         <label class="ap-field"><span>API key (UUID)</span><input id="kApiKey" autocomplete="off" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" /></label>
@@ -337,7 +474,7 @@
     </div></section>
 
     <section class="card"><div class="card-pad">
-      <div class="ap-venue-head"><span class="badge poly">Polymarket</span><span class="spacer"></span><span class="ap-conn" id="pConn">…</span></div>
+      <div class="ap-venue-head"><span class="badge poly">Polymarket</span><button type="button" class="ap-help-btn" data-help="polymarket" title="How to connect">?</button><span class="spacer"></span><span class="ap-conn" id="pConn">…</span></div>
       <div class="ap-venue-meta" id="pMeta"></div>
       <div id="pForm">
         <label class="ap-field"><span>Wallet private key</span><input id="pKey" type="password" autocomplete="off" />
@@ -363,7 +500,7 @@
     </div></section>
 
     <section class="card"><div class="card-pad">
-      <div class="ap-venue-head"><span class="badge cryptocom">Crypto.com</span><span class="spacer"></span><span class="ap-conn" id="ccConn">…</span></div>
+      <div class="ap-venue-head"><span class="badge cryptocom">Crypto.com</span><button type="button" class="ap-help-btn" data-help="cryptocom" title="How to connect">?</button><span class="spacer"></span><span class="ap-conn" id="ccConn">…</span></div>
       <div class="ap-venue-meta" id="ccMeta"></div>
       <div id="ccForm">
         <label class="ap-field"><span>Exchange API key</span><input id="ccApiKey" autocomplete="off" /></label>
@@ -554,10 +691,119 @@
   <button class="btn" id="saveBarBtn">Save</button>
 </div>
 
+<!-- Reusable Connection Help Modal -->
+<div class="modal-overlay" id="helpModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 id="modalTitle">Connection Help</h3>
+      <button type="button" class="modal-close" id="modalCloseBtn">&times;</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
 <script src="/ap-ledger.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ── connection help popups ────────────────────────────────────── */
+const HELP_CONTENT = {
+  kalshi: {
+    title: 'How to Connect Kalshi',
+    body: `
+      <h4>Step 1: Get API Key ID</h4>
+      <p>Log in to Kalshi and navigate to <b>Settings &gt; API Keys</b>. Click "Create API Key".</p>
+      <p>Copy the <b>API Key ID</b> (it is in UUID format, e.g., <code>xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx</code>) and paste it into the API Key field.</p>
+      
+      <h4>Step 2: Save Private Key PEM</h4>
+      <p>Creating an API key downloads a <code>.pem</code> file containing your private RSA key. Open this file in a text editor.</p>
+      <p>Copy the <b>entire block of text</b>, including the header line <code>-----BEGIN RSA PRIVATE KEY-----</code> and footer line <code>-----END RSA PRIVATE KEY-----</code>, and paste it into the Private Key field.</p>
+      
+      <h4>Step 3: Match the Environment</h4>
+      <p>Choose <b>Demo</b> if you are using test/demo keys for paper testing. Choose <b>Production</b> only if using production keys and real capital.</p>
+      <div class="tip-box">
+        <b>Tip:</b> Demo keys will fail to connect on Production endpoints, and vice versa. Always test your keys in Demo first!
+      </div>
+    `
+  },
+  polymarket: {
+    title: 'How to Connect Polymarket',
+    body: `
+      <h4>Step 1: Retrieve Wallet Private Key</h4>
+      <p>If you log in to Polymarket via email (using Magic Link), you must extract your private key to trade programmatically. Go to <a href="https://reveal.magic.link" target="_blank" rel="noopener">reveal.magic.link</a>, sign in using the <b>same email address</b> as your Polymarket account, and reveal your private key.</p>
+      <p>Copy the <b>64-character hex string</b> and paste it into the Wallet Private Key field.</p>
+      
+      <h4>Step 2: Find your Funder Address</h4>
+      <p>Go to your Polymarket settings at <a href="https://polymarket.com/settings" target="_blank" rel="noopener">polymarket.com/settings</a>.</p>
+      <p>Locate and copy your deposit address (the <code>0x...</code> proxy wallet address or "For API use only" address). Paste it into the Funder Address field.</p>
+      
+      <h4>Step 3: Select Signature Type</h4>
+      <p>Leave signature type on <b>Auto-detect</b>. Autopilot will inspect the address format and set the correct signing scheme:</p>
+      <ul>
+        <li><b>Type 1 (Magic Proxy):</b> Used for standard email-based Magic accounts.</li>
+        <li><b>Type 3 (API Deposit Wallet):</b> Used for direct API deposit endpoints.</li>
+        <li><b>Type 0 (EOA):</b> Used if you are using a standard MetaMask/Web3 wallet directly.</li>
+      </ul>
+      <div class="tip-box">
+        <b>Security:</b> Autopilot stores keys with AES-GCM encryption bound to your user session. Never share your private key with anyone.
+      </div>
+    `
+  },
+  cryptocom: {
+    title: 'How to Connect Crypto.com Predict',
+    body: `
+      <h4>Step 1: Generate Exchange API Key</h4>
+      <p>Log in to the <b>Crypto.com Exchange</b> dashboard (note: this is the web exchange site at <code>exchange.crypto.com</code>, <i>not</i> the mobile app).</p>
+      <p>Go to your profile icon in the top right, select <b>API Keys</b>, and click "Create a New API Key". Label it "Autopilot".</p>
+      
+      <h4>Step 2: Enable Permissions</h4>
+      <p>Ensure the key has <b>Enable Trading</b> checked so it can execute transactions. (Keep withdrawal permissions disabled for safety).</p>
+      
+      <h4>Step 3: Copy Key &amp; Secret</h4>
+      <p>Copy the generated <b>API Key</b> and the <b>API Secret</b>, and paste them into the respective fields.</p>
+      <div class="tip-box">
+        <b>Note:</b> Autopilot trades on predict markets. Your keys are used exclusively to check balances and place predict limit orders.
+      </div>
+    `
+  }
+};
+
+function initHelpModals() {
+  const modal = $('helpModal');
+  const title = $('modalTitle');
+  const body = $('modalBody');
+  const closeBtn = $('modalCloseBtn');
+  
+  if (!modal) return;
+  
+  function openHelp(venue) {
+    const content = HELP_CONTENT[venue];
+    if (!content) return;
+    title.textContent = content.title;
+    body.innerHTML = content.body;
+    modal.classList.add('open');
+  }
+  
+  function closeHelp() {
+    modal.classList.remove('open');
+  }
+  
+  document.querySelectorAll('.ap-help-btn').forEach(btn => {
+    btn.onclick = (e) => {
+      e.preventDefault();
+      openHelp(btn.dataset.help);
+    };
+  });
+  
+  closeBtn.onclick = closeHelp;
+  modal.onclick = (e) => {
+    if (e.target === modal) closeHelp();
+  };
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal.classList.contains('open')) closeHelp();
+  });
+}
 
 let strategies = [];
 let selected = 'half_kelly';
@@ -1462,6 +1708,7 @@ function startBankroll() {
     activeBkTab = bkViewFromUrl();
     setTab(tabFromUrl(), false);
   });
+  initHelpModals();
 })();
 </script>
 <script src="/header.js?v=2"></script>
