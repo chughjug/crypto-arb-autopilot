@@ -40,7 +40,7 @@ PAGES = {
 }
 
 STATIC_JS = {
-    "/header.js", "/account.js", "/live.js", "/viewmode.js", "/market-detail.js",
+    "/header.js", "/account.js", "/auth-ui.js", "/live.js", "/viewmode.js", "/market-detail.js",
     "/bot-ledger.js", "/theme.css", "/bot-panel.css", "/manifest.json",
 }
 STATIC_IMG = {
@@ -333,7 +333,7 @@ class Handler(BaseHTTPRequestHandler):
             ctype = "text/css; charset=utf-8" if rel.endswith(".css") else "application/javascript; charset=utf-8"
             if rel == "manifest.json":
                 ctype = "application/manifest+json; charset=utf-8"
-            cache = 0 if rel in ("header.js", "account.js") else 3600
+            cache = 0 if rel in ("header.js", "account.js", "auth-ui.js") else 3600
             self._serve_file(WEB / rel, ctype, max_age=cache)
             return
 

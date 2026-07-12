@@ -66,7 +66,12 @@
     </p>
   </div>
 </div>
-<script src="/header.js?v=3"></script>
-<script src="/account.js?v=3"></script>
+<script src="/header.js?v=4" defer></script>
+<script src="/auth-ui.js?v=4" defer></script>
+<script defer>
+document.addEventListener("DOMContentLoaded", function () {
+  if (window.AccountAuth) AccountAuth.boot();
+});
+</script>
 </body>
 </html>
