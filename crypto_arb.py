@@ -304,7 +304,7 @@ def _cryptocom_coin(coin: str, cfg: dict) -> list[dict]:
         expiry = _canonical_expiry(e.get("payout_date") or e.get("close_date") or "")
         if not expiry:
             continue
-        slug = e.get("slug") or e.get("id")
+        slug = e.get("id")
         for c in contracts.get(e.get("id"), []):
             contract_title = c.get("contract_title", "")
             strike = _cc_strike(contract_title, c.get("symbol", ""))
