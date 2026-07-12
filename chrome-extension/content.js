@@ -89,37 +89,49 @@
   }
 
   /**
-   * Set value on a React-controlled input by bypassing React's synthetic
-   * event system via document.execCommand and native setters.
+   * Set value on a React-controlled input by simulating user keystrokes.
    */
-  function setReactInputValue(input, value) {
-    log('Setting React input value to: ' + value);
+  async function typeIntoInput(input, value) {
+    log('Simulating typing value: ' + value);
     input.focus();
     input.select?.();
+    input.setSelectionRange?.(0, input.value.length);
     
-    // Try to set via execCommand (types like a user)
-    let commandSuccess = false;
     try {
-      commandSuccess = document.execCommand('insertText', false, String(value));
+      document.execCommand('delete', false, null);
     } catch (e) {
-      log('execCommand failed, trying fallback', e);
+      log('Delete command failed, clearing value manually', e);
+      input.value = '';
     }
-    
-    if (!commandSuccess) {
-      const nativeSetter = Object.getOwnPropertyDescriptor(
-        window.HTMLInputElement.prototype, 'value'
-      ).set;
-      if (nativeSetter) {
-        nativeSetter.call(input, String(value));
-      } else {
-        input.value = String(value);
+    await sleep(100);
+
+    const str = String(value);
+    for (let i = 0; i < str.length; i++) {
+      const char = str[i];
+      const keyCode = char.charCodeAt(0);
+      const opts = { bubbles: true, cancelable: true, key: char, charCode: keyCode, keyCode: keyCode };
+      
+      input.dispatchEvent(new KeyboardEvent('keydown', opts));
+      input.dispatchEvent(new KeyboardEvent('keypress', opts));
+      
+      let typed = false;
+      try {
+        typed = document.execCommand('insertText', false, char);
+      } catch (e) {
+        log('insertText failed during typing', e);
       }
+      
+      if (!typed) {
+        input.value = input.value + char;
+      }
+      
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new KeyboardEvent('keyup', opts));
+      await sleep(80);
     }
     
-    input.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
-    input.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
-    input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: String(value) }));
-    input.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: String(value) }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    input.dispatchEvent(new Event('blur', { bubbles: true }));
   }
 
   /**
@@ -196,7 +208,7 @@
       // Clear existing value and set new one
       // Some Mantine NumberInputs need the value selected first
       qtyInput.select?.();
-      setReactInputValue(qtyInput, quantity);
+      await typeIntoInput(qtyInput, quantity);
       await sleep(400);
 
       // Verify it took
@@ -256,7 +268,7 @@
         const inp = pinInputs[i];
         inp.focus();
         await sleep(80);
-        setReactInputValue(inp, pin[i]);
+        await typeIntoInput(inp, pin[i]);
         // Also dispatch keyboard events for PIN components that listen to keydown
         inp.dispatchEvent(new KeyboardEvent('keydown', { key: pin[i], code: 'Digit' + pin[i], bubbles: true }));
         inp.dispatchEvent(new KeyboardEvent('keyup',  { key: pin[i], code: 'Digit' + pin[i], bubbles: true }));
