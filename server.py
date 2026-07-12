@@ -478,16 +478,23 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json(401, {"error": "sign in required"}, extra)
                 return
             import autopilot_store
+            from arb import user_venue
+
             body = self._read_json()
             if not body.get("api_key") or not body.get("private_key"):
                 self._send_json(400, {"error": "api_key and private_key required"}, extra)
                 return
-            status = autopilot_store.save_venue_credentials(user["id"], "kalshi", {
+            payload = {
                 "api_key": body["api_key"].strip(),
                 "private_key": body["private_key"].strip(),
                 "demo": bool(body.get("demo", True)),
-            })
-            self._send_json(200, {"venue": status}, extra)
+            }
+            check = user_venue.verify_kalshi_credentials(payload)
+            if check.get("error"):
+                self._send_json(400, {"error": check["error"]}, extra)
+                return
+            status = autopilot_store.save_venue_credentials(user["id"], "kalshi", payload)
+            self._send_json(200, {"venue": status, "balance": check}, extra)
             return
 
         if path == "/api/autopilot/connect/polymarket":

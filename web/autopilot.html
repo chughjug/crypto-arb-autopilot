@@ -58,8 +58,8 @@
   <div class="ap-grid">
     <section class="ap-card">
       <h2>Kalshi</h2>
-      <p>API key + RSA private key (PEM). Demo recommended.</p>
-      <label class="ap-field"><span>API key</span><input id="kApiKey" autocomplete="off" /></label>
+      <p>API key UUID + RSA private key (PEM). <b>Demo keys only work in Demo mode</b> (from demo.kalshi.co).</p>
+      <label class="ap-field"><span>API key (UUID)</span><input id="kApiKey" autocomplete="off" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" /></label>
       <label class="ap-field"><span>Private key (PEM)</span><textarea id="kPem" placeholder="-----BEGIN RSA PRIVATE KEY-----"></textarea></label>
       <label class="ap-field"><span>Mode</span>
         <select id="kDemo"><option value="1">Demo</option><option value="0">Production</option></select>
@@ -188,15 +188,23 @@ async function refresh() {
 }
 
 $('kConnect').onclick = async () => {
-  await api('/api/autopilot/connect/kalshi', {
-    method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({
-      api_key: $('kApiKey').value,
-      private_key: $('kPem').value,
-      demo: $('kDemo').value === '1',
-    }),
-  });
-  refresh();
+  $('kStatus').innerHTML = '<span class="ap-chip">Verifying…</span>';
+  try {
+    const d = await api('/api/autopilot/connect/kalshi', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        api_key: $('kApiKey').value,
+        private_key: $('kPem').value,
+        demo: $('kDemo').value === '1',
+      }),
+    });
+    const cash = d.balance?.cash_cents;
+    const label = cash != null ? ` · $${(cash / 100).toFixed(2)}` : '';
+    $('kStatus').innerHTML = `<span class="ap-chip on">Connected${label}</span>`;
+    refresh();
+  } catch (e) {
+    $('kStatus').innerHTML = `<span class="ap-chip off">${e.message}</span>`;
+  }
 };
 
 $('pConnect').onclick = async () => {
