@@ -734,6 +734,7 @@ function renderCryptoArb(b, d) {
     breakdownItem('Avg settled', d.settled_count?pnlFmt((d.confirmed_pnl||0)/d.settled_count):'—', 'Per pair', pnlClass(d.confirmed_pnl)) +
     breakdownItem('Pending', pnlFmt(d.locked_pending||0), (d.open_count||0)+' open') +
     breakdownItem('Return', (d.confirmed_return_pct>=0?'+':'')+Number(d.confirmed_return_pct||0).toFixed(2)+'%', money(d.total_injected), pnlClass(d.confirmed_return_pct)) +
+    breakdownItem('Polling for', d.polling_age_s==null?'—':fmtDur(d.polling_age_s), 'since start', '') +
     '</div><div class="bot-spark"><canvas class="eq-spark" height="48"></canvas></div></div>';
 
   const strategy =

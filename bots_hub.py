@@ -494,6 +494,7 @@ def _strategy_row(strategy_id: str, meta: dict, snap: dict) -> dict:
         "return_std_pct": risk.get("return_std_pct"),
         "equity_curve": _compact_equity_curve(snap.get("equity_curve")),
         "subtitle": f"Life #{snap.get('life', 1)} · $50 bankroll",
+        "polling_age_s": snap.get("polling_age_s"),
         "api": f"/api/cryptoarbitrage/bot/{strategy_id}",
         "config_api": None,
     }

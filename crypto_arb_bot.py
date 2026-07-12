@@ -896,6 +896,8 @@ class ArbBot:
             },
         }
 
+        self.started_at = time.time()
+
         self._init_ledger()
         self._load_from_db()
         self._apply_strategy(self.cfg["strategy"])
@@ -1566,6 +1568,7 @@ class ArbBot:
             return {
                 "running": True,  # always on
                 "life": self.life,
+                "polling_age_s": int(now - self.started_at),
                 "strategy": self.cfg.get("strategy", "half_kelly"),
                 "strategies": {
                     k: {
