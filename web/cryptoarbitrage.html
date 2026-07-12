@@ -410,6 +410,8 @@ function oppBreakdown(r){
   const yc = r.yes_cost, nc = r.no_cost;
   if(yc==null||nc==null) return '';
   const sum = yc+nc;
+  return '<div class="ca-opp-break"><span class="v-cost '+r.yes_venue+'">'+VLABEL[r.yes_venue]+' YES</span> $'+yc.toFixed(2)+
+    ' + <span class="v-cost '+r.no_venue+'">'+VLABEL[r.no_venue]+' NO</span> $'+nc.toFixed(2)+
     ' = <b>$'+sum.toFixed(2)+'</b><div class="lock-line">→ lock $'+r.max_arb.toFixed(2)+' per contract</div></div>';
 }
 
