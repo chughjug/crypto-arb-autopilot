@@ -2,25 +2,27 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<link rel="manifest" href="/manifest.json" />
-<meta name="theme-color" content="#0f172a" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Account · Crypto Arb</title>
 <link rel="stylesheet" href="/theme.css" />
 <script src="/viewmode.js"></script>
 <style>
-  .auth-wrap { max-width: 420px; margin: 48px auto 80px; padding: 0 20px; }
+  .auth-wrap { max-width: 440px; margin: 48px auto 80px; padding: 0 20px; }
   .auth-card { padding: 28px; }
   .auth-card h1 { margin: 0 0 6px; font-size: 26px; font-weight: 800; }
-  .auth-card .sub { color: var(--muted); font-size: 14px; margin: 0 0 22px; }
+  .auth-card .sub { color: var(--muted); font-size: 14px; margin: 0 0 22px; line-height: 1.45; }
   .field { margin-bottom: 14px; }
   .field label { display: block; font-size: 12px; font-weight: 700; color: var(--muted-2); text-transform: uppercase; margin-bottom: 6px; }
-  .field input { width: 100%; padding: 12px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); font-size: 15px; }
+  .field input { width: 100%; padding: 12px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); font-size: 15px; box-sizing: border-box; }
   .auth-msg { min-height: 20px; font-size: 13px; color: var(--red); margin: 10px 0; }
   .auth-msg.ok { color: var(--emerald); }
   .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
   .tabs button { flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: #fff; font-weight: 700; cursor: pointer; }
   .tabs button.on { background: var(--dark); color: #fff; border-color: var(--dark); }
+  .twofa-box { display: none; margin-top: 8px; padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
+  .twofa-box.show { display: block; }
+  .secret-code { font-family: ui-monospace, monospace; font-size: 12px; word-break: break-all; background: #fff; padding: 8px; border-radius: 6px; margin: 8px 0; }
+  .qr-link { font-size: 12px; word-break: break-all; }
 </style>
 </head>
 <body>
@@ -28,19 +30,33 @@
 <div class="auth-wrap">
   <div class="card auth-card">
     <h1 id="authTitle">Sign in</h1>
-    <p class="sub">Create an account to save venue credentials and run autopilot.</p>
-    <div class="tabs">
+    <p class="sub" id="authSub">Password + authenticator app (2FA) required for all accounts.</p>
+    <div class="tabs" id="authTabs">
       <button type="button" id="tabLogin" class="on">Sign in</button>
       <button type="button" id="tabRegister">Register</button>
     </div>
     <form id="authForm">
-      <div class="field">
+      <div class="field" id="userField">
         <label for="username">Username</label>
         <input id="username" required minlength="2" maxlength="32" pattern="[A-Za-z0-9_-]+" autocomplete="username" />
       </div>
       <div class="field" id="pwField">
         <label for="password">Password</label>
-        <input id="password" type="password" minlength="8" autocomplete="current-password" />
+        <input id="password" type="password" minlength="10" autocomplete="current-password" placeholder="Min 10 characters" />
+      </div>
+      <div class="twofa-box" id="twofaBox">
+        <p style="margin:0 0 8px;font-size:13px;font-weight:700" id="twofaTitle">Authenticator code</p>
+        <p class="sub" style="margin:0 0 10px" id="twofaHint">Enter the 6-digit code from your authenticator app.</p>
+        <div id="setupInfo" style="display:none">
+          <p class="sub" style="margin:0 0 6px">Scan this in Google Authenticator, 1Password, or Authy:</p>
+          <p class="qr-link"><a id="otpLink" href="#" target="_blank" rel="noopener">Open setup link</a></p>
+          <p class="sub" style="margin:8px 0 4px">Or enter secret manually:</p>
+          <div class="secret-code" id="otpSecret"></div>
+        </div>
+        <div class="field">
+          <label for="totpCode">6-digit code</label>
+          <input id="totpCode" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="000000" />
+        </div>
       </div>
       <div class="auth-msg" id="authMsg"></div>
       <button class="btn" type="submit" style="width:100%" id="authSubmit">Sign In</button>
@@ -54,44 +70,129 @@
 <script>
 const $ = s => document.querySelector(s);
 let mode = 'login';
+let pending = null; // { kind: 'login'|'setup', token }
+
 function setMode(m) {
   mode = m;
+  pending = null;
   $('tabLogin').classList.toggle('on', m === 'login');
   $('tabRegister').classList.toggle('on', m === 'register');
   $('authTitle').textContent = m === 'login' ? 'Sign in' : 'Create account';
-  $('authSubmit').textContent = m === 'login' ? 'Sign In' : 'Register';
-  $('password').required = m === 'register';
+  $('authSubmit').textContent = m === 'login' ? 'Sign In' : 'Create account';
+  $('password').required = true;
+  $('password').autocomplete = m === 'login' ? 'current-password' : 'new-password';
+  $('twofaBox').classList.remove('show');
+  $('setupInfo').style.display = 'none';
+  $('authTabs').style.display = 'flex';
+  $('userField').style.display = 'block';
+  $('pwField').style.display = 'block';
+  $('authMsg').textContent = '';
 }
+
 $('tabLogin').onclick = () => setMode('login');
 $('tabRegister').onclick = () => setMode('register');
+
+function show2fa(kind, data) {
+  pending = { kind, token: data.challenge_token || data.setup_token };
+  $('twofaBox').classList.add('show');
+  $('totpCode').value = '';
+  $('totpCode').focus();
+  if (kind === 'setup') {
+    $('authTabs').style.display = 'none';
+    $('userField').style.display = 'none';
+    $('pwField').style.display = 'none';
+    $('authTitle').textContent = 'Set up 2FA';
+    $('authSubmit').textContent = 'Confirm & sign in';
+    $('twofaTitle').textContent = 'Scan authenticator app';
+    $('setupInfo').style.display = 'block';
+    $('otpLink').href = data.otpauth_uri || '#';
+    $('otpSecret').textContent = data.totp_secret || '';
+  } else {
+    $('setupInfo').style.display = 'none';
+    $('authTitle').textContent = 'Two-factor authentication';
+    $('authSubmit').textContent = 'Verify & sign in';
+    $('twofaHint').textContent = 'Enter the 6-digit code from your authenticator app.';
+  }
+}
+
+async function finish2fa(code) {
+  const path = pending.kind === 'setup' ? '/api/auth/2fa/confirm' : '/api/auth/2fa/verify';
+  const body = pending.kind === 'setup'
+    ? { setup_token: pending.token, code }
+    : { challenge_token: pending.token, code };
+  const res = await fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const d = await res.json();
+  if (!res.ok) throw new Error(d.error || res.statusText);
+  $('authMsg').className = 'auth-msg ok';
+  $('authMsg').textContent = 'Success — redirecting…';
+  location.href = '/autopilot';
+}
+
 $('authForm').onsubmit = async e => {
   e.preventDefault();
   const msg = $('authMsg');
   msg.className = 'auth-msg';
-  msg.textContent = 'Working…';
-  const path = mode === 'register' ? '/api/auth/register' : '/api/auth/login';
   try {
-    const res = await fetch(path, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: $('username').value.trim(),
-        password: $('password').value,
-      }),
-    });
-    const d = await res.json();
-    if (!res.ok) throw new Error(d.error || res.statusText);
-    msg.className = 'auth-msg ok';
-    msg.textContent = 'Success — redirecting…';
-    location.href = '/autopilot';
+    if (pending) {
+      msg.textContent = 'Verifying…';
+      await finish2fa($('totpCode').value.trim());
+      return;
+    }
+    msg.textContent = 'Working…';
+    if (mode === 'register') {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: $('username').value.trim(),
+          password: $('password').value,
+        }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || res.statusText);
+      if (d.requires_2fa_setup) {
+        show2fa('setup', d);
+        msg.className = 'auth-msg ok';
+        msg.textContent = 'Account created — set up your authenticator app below.';
+        return;
+      }
+    } else {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: $('username').value.trim(),
+          password: $('password').value,
+        }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || res.statusText);
+      if (d.requires_2fa) {
+        show2fa('login', d);
+        msg.textContent = '';
+        return;
+      }
+      if (d.requires_2fa_setup) {
+        show2fa('setup', d);
+        msg.className = 'auth-msg ok';
+        msg.textContent = 'Finish setting up 2FA to continue.';
+        return;
+      }
+    }
   } catch (err) {
     msg.textContent = err.message;
   }
 };
+
 AppHeader.mount('#appHeader');
 fetch('/api/auth/me').then(r => r.json()).then(d => {
   if (d.user && !d.user.is_guest) location.href = '/autopilot';
 });
+setMode('login');
 </script>
 </body>
 </html>

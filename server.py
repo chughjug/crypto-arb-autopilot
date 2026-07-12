@@ -350,30 +350,50 @@ class Handler(BaseHTTPRequestHandler):
             user, _, extra = self._current_user()
             body = self._read_json()
             try:
-                token, user = auth.register(
+                result = auth.register(
                     body.get("username") or "",
                     body.get("password") or "",
                     guest_id=user["id"] if user and user.get("is_guest") else None,
                 )
-                self._send_json(200, {"user": user}, [("Set-Cookie", auth.cookie_header(token))])
+                self._send_json(200, result, extra)
             except ValueError as e:
                 self._send_json(400, {"error": str(e)}, extra)
             return
 
         if path == "/api/auth/login":
-            user, _, extra = self._current_user()
+            _, _, extra = self._current_user()
             body = self._read_json()
             try:
-                if body.get("password"):
-                    token, user = auth.login(body.get("username") or "", body.get("password") or "")
-                else:
-                    token, user = auth.sign_in(
-                        body.get("username") or "",
-                        guest_id=user["id"] if user and user.get("is_guest") else None,
-                    )
-                self._send_json(200, {"user": user}, [("Set-Cookie", auth.cookie_header(token))])
+                if not body.get("password"):
+                    raise ValueError("password required")
+                result = auth.login(body.get("username") or "", body.get("password") or "")
+                self._send_json(200, result, extra)
             except ValueError as e:
                 self._send_json(400, {"error": str(e)}, extra)
+            return
+
+        if path == "/api/auth/2fa/verify":
+            body = self._read_json()
+            try:
+                token, user = auth.verify_2fa(
+                    body.get("challenge_token") or "",
+                    body.get("code") or "",
+                )
+                self._send_json(200, {"user": user}, [("Set-Cookie", auth.cookie_header(token))])
+            except ValueError as e:
+                self._send_json(400, {"error": str(e)})
+            return
+
+        if path == "/api/auth/2fa/confirm":
+            body = self._read_json()
+            try:
+                token, user = auth.confirm_2fa_setup(
+                    body.get("setup_token") or "",
+                    body.get("code") or "",
+                )
+                self._send_json(200, {"user": user}, [("Set-Cookie", auth.cookie_header(token))])
+            except ValueError as e:
+                self._send_json(400, {"error": str(e)})
             return
 
         if path == "/api/auth/logout":

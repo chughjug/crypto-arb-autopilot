@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import base64
-import hashlib
 import json
 import os
 import sqlite3
@@ -12,7 +10,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from cryptography.fernet import Fernet
+from vault import open_sensitive_payload, seal_sensitive_payload
 
 _lock = threading.Lock()
 _conn: sqlite3.Connection | None = None
@@ -29,14 +27,6 @@ def _db_path() -> str:
     path = Path(os.environ.get("AUTOPILOT_DB_PATH", default))
     path.parent.mkdir(parents=True, exist_ok=True)
     return str(path)
-
-
-def _fernet() -> Fernet:
-    raw = os.environ.get("AUTOPILOT_SECRET_KEY", "").strip()
-    if not raw:
-        raw = os.environ.get("SESSION_SECRET", "dev-autopilot-secret-change-me")
-    key = base64.urlsafe_b64encode(hashlib.sha256(raw.encode()).digest())
-    return Fernet(key)
 
 
 def _connect() -> sqlite3.Connection:
@@ -78,19 +68,19 @@ def _connect() -> sqlite3.Connection:
     return _conn
 
 
-def _encrypt(data: dict) -> str:
-    return _fernet().encrypt(json.dumps(data).encode()).decode()
+def _encrypt(user_id: str, data: dict) -> str:
+    return seal_sensitive_payload(user_id, data)
 
 
-def _decrypt(blob: str) -> dict:
-    return json.loads(_fernet().decrypt(blob.encode()).decode())
+def _decrypt(user_id: str, blob: str) -> dict:
+    return open_sensitive_payload(user_id, blob)
 
 
 def save_venue_credentials(user_id: str, venue: str, payload: dict) -> dict:
     if venue not in VENUES:
         raise ValueError(f"Unknown venue: {venue}")
     now = time.time()
-    enc = _encrypt(payload)
+    enc = _encrypt(user_id, payload)
     with _lock:
         _connect().execute(
             """INSERT INTO venue_credentials(user_id, venue, enc_payload, connected_at, updated_at)
@@ -121,7 +111,7 @@ def get_venue_credentials(user_id: str, venue: str) -> dict | None:
         ).fetchone()
     if not row:
         return None
-    return _decrypt(row["enc_payload"])
+    return _decrypt(user_id, row["enc_payload"])
 
 
 def venue_status(user_id: str, venue: str) -> dict:

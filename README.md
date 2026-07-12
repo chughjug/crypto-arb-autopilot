@@ -40,14 +40,25 @@ git push heroku main
 | `AUTOPILOT_DB_PATH` | Autopilot config + encrypted creds |
 | `CRYPTO_ARB_POLL_SECONDS` | Arb scanner interval (default 2s) |
 
+## Security
+
+- **Passwords:** scrypt (N=2^15, r=8, p=1), min 10 characters
+- **2FA:** mandatory TOTP (Google Authenticator / 1Password / Authy) on every sign-in
+- **Venue API keys:** per-user AES-256-GCM with HKDF-derived keys, sensitive fields sealed individually, master envelope layer
+- **Sessions:** random tokens stored as HMAC-SHA256 hashes only (never plaintext in DB)
+- **Cookies:** `HttpOnly`, `SameSite=Strict`, `Secure` on Heroku
+
+Set a strong `AUTOPILOT_SECRET_KEY` (32+ byte random hex recommended):
+
+```bash
+python3 -c "import secrets; print(secrets.token_hex(32))"
+```
+
 ## User flow
 
-1. Register at `/account` (username + password)
-2. Connect Kalshi (demo recommended), Polymarket, and/or Crypto.com API keys at `/autopilot`
-3. Pick a sizing strategy and bankroll
-4. Start autopilot — scans `crypto_arb` opportunities and places legs on connected venues
-
-**Start in paper/demo mode.** Live mode places real orders.
+1. **Register** at `/account` → scan QR / enter TOTP secret → confirm with first code
+2. **Sign in** → password → 6-digit authenticator code
+3. Connect venues at `/autopilot` → start in paper/demo mode
 
 ## API
 
