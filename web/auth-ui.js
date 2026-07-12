@@ -4,6 +4,24 @@
   let mode = "login";
   let pending = null;
 
+  function clearQr() {
+    const wrap = $("otpQrWrap");
+    const img = $("otpQr");
+    if (wrap) wrap.hidden = true;
+    if (img) img.removeAttribute("src");
+  }
+
+  function showQr(uri) {
+    const wrap = $("otpQrWrap");
+    const img = $("otpQr");
+    if (!wrap || !img || !uri) {
+      clearQr();
+      return;
+    }
+    img.src = `/api/auth/2fa/qr?data=${encodeURIComponent(uri)}`;
+    wrap.hidden = false;
+  }
+
   function setMode(m) {
     mode = m;
     pending = null;
@@ -13,6 +31,7 @@
     $("authSubmit").textContent = m === "login" ? "Continue" : "Create account";
     $("twofaBox").classList.remove("show");
     $("setupInfo").style.display = "none";
+    clearQr();
     $("authTabs").style.display = "flex";
     $("userField").style.display = "block";
     $("authMsg").textContent = "";
@@ -30,10 +49,13 @@
       $("authSubmit").textContent = "Confirm & sign in";
       $("twofaTitle").textContent = "Scan authenticator app";
       $("setupInfo").style.display = "block";
-      $("otpLink").href = data.otpauth_uri || "#";
+      const uri = data.otpauth_uri || "";
+      $("otpLink").href = uri || "#";
       $("otpSecret").textContent = data.totp_secret || "";
+      showQr(uri);
     } else {
       $("setupInfo").style.display = "none";
+      clearQr();
       $("authTitle").textContent = "Two-factor authentication";
       $("authSubmit").textContent = "Verify & sign in";
       $("twofaHint").textContent = "Enter the 6-digit code from your authenticator app.";

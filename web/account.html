@@ -22,7 +22,9 @@
   .twofa-box { display: none; margin-top: 8px; padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
   .twofa-box.show { display: block; }
   .secret-code { font-family: ui-monospace, monospace; font-size: 12px; word-break: break-all; background: #fff; padding: 8px; border-radius: 6px; margin: 8px 0; }
-  .qr-link { font-size: 12px; word-break: break-all; }
+  .qr-wrap { text-align: center; margin: 12px 0 14px; }
+  .qr-wrap img { display: block; margin: 0 auto; border: 1px solid var(--border); border-radius: 10px; background: #fff; padding: 10px; }
+  .qr-link { font-size: 12px; word-break: break-all; text-align: center; }
 </style>
 </head>
 <body>
@@ -44,8 +46,11 @@
         <p style="margin:0 0 8px;font-size:13px;font-weight:700" id="twofaTitle">Authenticator code</p>
         <p class="sub" style="margin:0 0 10px" id="twofaHint">Enter the 6-digit code from your authenticator app.</p>
         <div id="setupInfo" style="display:none">
-          <p class="sub" style="margin:0 0 6px">Scan this in Google Authenticator, 1Password, or Authy:</p>
-          <p class="qr-link"><a id="otpLink" href="#" target="_blank" rel="noopener">Open setup link</a></p>
+          <p class="sub" style="margin:0 0 10px;text-align:center">Scan with Google Authenticator, 1Password, or Authy:</p>
+          <div class="qr-wrap" id="otpQrWrap" hidden>
+            <img id="otpQr" alt="2FA setup QR code" width="200" height="200" />
+          </div>
+          <p class="qr-link"><a id="otpLink" href="#" target="_blank" rel="noopener">Can't scan? Open setup link</a></p>
           <p class="sub" style="margin:8px 0 4px">Or enter secret manually:</p>
           <div class="secret-code" id="otpSecret"></div>
         </div>
@@ -63,7 +68,7 @@
   </div>
 </div>
 <script src="/header.js?v=4" defer></script>
-<script src="/auth-ui.js?v=6" defer></script>
+<script src="/auth-ui.js?v=7" defer></script>
 <script defer>
 document.addEventListener("DOMContentLoaded", function () {
   if (window.AccountAuth) AccountAuth.boot();
