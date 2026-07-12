@@ -434,7 +434,22 @@ class Handler(BaseHTTPRequestHandler):
                 ])
                 return
 
-        if path.startswith("/cryptocom/") or path.startswith("/kalshi/") or path.startswith("/polymarket/"):
+        if path.startswith("/cryptocom/"):
+            parts = path.split("/")
+            if len(parts) >= 3:
+                eid = parts[2].split("?")[0]
+                if len(eid) > 10:
+                    query_string = self.path.split("?")[1] if "?" in self.path else ""
+                    qs = f"?{query_string}" if query_string else ""
+                    target_url = f"https://web.crypto.com/hub/predict/events/details/{eid}{qs}"
+                    self._send(302, b"", "text/html", [("Location", target_url)])
+                    return
+            p = WEB / "market.html"
+            if p.is_file():
+                self._send(200, p.read_bytes(), "text/html; charset=utf-8")
+                return
+
+        if path.startswith("/kalshi/") or path.startswith("/polymarket/"):
             p = WEB / "market.html"
             if p.is_file():
                 self._send(200, p.read_bytes(), "text/html; charset=utf-8")

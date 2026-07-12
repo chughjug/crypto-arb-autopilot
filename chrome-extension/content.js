@@ -76,16 +76,50 @@
   }
 
   /**
+   * Click an element robustly by dispatching pointer events to satisfy React handlers.
+   */
+  function clickElement(el) {
+    if (!el) return;
+    log('Clicking element: ' + (el.tagName || '') + ' ' + (el.textContent || '').trim());
+    el.focus?.();
+    const opts = { bubbles: true, cancelable: true, view: window };
+    el.dispatchEvent(new MouseEvent('mousedown', opts));
+    el.dispatchEvent(new MouseEvent('mouseup', opts));
+    el.click();
+  }
+
+  /**
    * Set value on a React-controlled input by bypassing React's synthetic
-   * event system via the native HTMLInputElement prototype.
+   * event system via document.execCommand and native setters.
    */
   function setReactInputValue(input, value) {
-    const nativeSetter = Object.getOwnPropertyDescriptor(
-      window.HTMLInputElement.prototype, 'value'
-    ).set;
-    nativeSetter.call(input, String(value));
-    input.dispatchEvent(new Event('input',  { bubbles: true }));
-    input.dispatchEvent(new Event('change', { bubbles: true }));
+    log('Setting React input value to: ' + value);
+    input.focus();
+    input.select?.();
+    
+    // Try to set via execCommand (types like a user)
+    let commandSuccess = false;
+    try {
+      commandSuccess = document.execCommand('insertText', false, String(value));
+    } catch (e) {
+      log('execCommand failed, trying fallback', e);
+    }
+    
+    if (!commandSuccess) {
+      const nativeSetter = Object.getOwnPropertyDescriptor(
+        window.HTMLInputElement.prototype, 'value'
+      ).set;
+      if (nativeSetter) {
+        nativeSetter.call(input, String(value));
+      } else {
+        input.value = String(value);
+      }
+    }
+    
+    input.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+    input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: String(value) }));
+    input.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: String(value) }));
   }
 
   /**
@@ -150,7 +184,7 @@
       }
 
       log(`Clicking ${side.toUpperCase()} button: "${btnText.trim()}"`);
-      btn.click();
+      clickElement(btn);
       await sleep(800);
 
       // ── Step 4: Set quantity ──────────────────────────────────────────
@@ -187,7 +221,7 @@
       }
       if (!placeBtn) throw new Error('Could not find "Place Order" button');
       log('Clicking Place Order');
-      placeBtn.click();
+      clickElement(placeBtn);
       await sleep(1000);
 
       // ── Step 6: Click "Confirm" ───────────────────────────────────────
@@ -202,7 +236,7 @@
       }
       if (!confirmBtn) throw new Error('Could not find "Confirm" button');
       log('Clicking Confirm');
-      confirmBtn.click();
+      clickElement(confirmBtn);
       await sleep(1200);
 
       // ── Step 7: Enter PIN ─────────────────────────────────────────────
