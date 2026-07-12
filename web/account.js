@@ -73,8 +73,13 @@
   }
 
   function init() {
-    $("tabLogin").addEventListener("click", () => setMode("login"));
-    $("tabRegister").addEventListener("click", () => setMode("register"));
+    const tabLogin = $("tabLogin");
+    const tabRegister = $("tabRegister");
+    const authForm = $("authForm");
+    if (!tabLogin || !tabRegister || !authForm) return;
+
+    tabLogin.addEventListener("click", () => setMode("login"));
+    tabRegister.addEventListener("click", () => setMode("register"));
 
     $("authForm").addEventListener("submit", async e => {
       e.preventDefault();
@@ -147,9 +152,13 @@
     setMode("login");
   }
 
+  function boot() {
+    if ($("authForm")) init();
+  }
+
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
+    document.addEventListener("DOMContentLoaded", boot);
   } else {
-    init();
+    boot();
   }
 })();
