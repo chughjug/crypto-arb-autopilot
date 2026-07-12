@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS autopilot_config (
     max_exposure_pct DOUBLE PRECISION,
     reserve_pct DOUBLE PRECISION NOT NULL DEFAULT 30,
     running BOOLEAN NOT NULL DEFAULT FALSE,
+    overrides TEXT,
     created_at DOUBLE PRECISION NOT NULL,
     updated_at DOUBLE PRECISION NOT NULL
 );

@@ -238,6 +238,7 @@ def default_config(user_id: str) -> dict:
         "max_exposure_pct": None,
         "reserve_pct": 30.0,
         "running": False,
+        "overrides": {},
     }
 
 
@@ -246,13 +247,16 @@ def save_config(user_id: str, updates: dict) -> dict:
     current.update({k: v for k, v in updates.items() if k in (
         "strategy_id", "bankroll_usd", "live_mode", "max_exposure_pct", "reserve_pct", "running",
     )})
+    if "overrides" in updates:
+        current["overrides"] = updates["overrides"]
+    overrides = _clean_overrides(current.get("overrides"))
     now = time.time()
     with _lock:
         _connect().execute(
             """INSERT INTO autopilot_config
                (user_id, strategy_id, bankroll_usd, live_mode, max_exposure_pct,
-                reserve_pct, running, created_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                reserve_pct, running, overrides, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                ON CONFLICT(user_id) DO UPDATE SET
                  strategy_id=excluded.strategy_id,
                  bankroll_usd=excluded.bankroll_usd,
@@ -260,6 +264,7 @@ def save_config(user_id: str, updates: dict) -> dict:
                  max_exposure_pct=excluded.max_exposure_pct,
                  reserve_pct=excluded.reserve_pct,
                  running=excluded.running,
+                 overrides=excluded.overrides,
                  updated_at=excluded.updated_at""",
             (
                 user_id,
@@ -269,6 +274,7 @@ def save_config(user_id: str, updates: dict) -> dict:
                 current.get("max_exposure_pct"),
                 float(current.get("reserve_pct", 30)),
                 bool(current.get("running")),
+                json.dumps(overrides) if overrides else None,
                 now,
                 now,
             ),
@@ -278,6 +284,12 @@ def save_config(user_id: str, updates: dict) -> dict:
 
 
 def _config_row(row) -> dict:
+    overrides = {}
+    if "overrides" in row.keys() and row["overrides"]:
+        try:
+            overrides = _clean_overrides(json.loads(row["overrides"]))
+        except (json.JSONDecodeError, TypeError):
+            overrides = {}
     return {
         "user_id": row["user_id"],
         "strategy_id": row["strategy_id"],
@@ -286,6 +298,7 @@ def _config_row(row) -> dict:
         "max_exposure_pct": row["max_exposure_pct"],
         "reserve_pct": float(row["reserve_pct"]),
         "running": bool(row["running"]),
+        "overrides": overrides,
         "updated_at": row["updated_at"],
     }
 
