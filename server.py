@@ -14,6 +14,7 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 import auth
@@ -526,15 +527,26 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json(401, {"error": "sign in required"}, extra)
                 return
             import autopilot_store
+            from arb import user_venue
+
             body = self._read_json()
             if not body.get("private_key"):
                 self._send_json(400, {"error": "private_key required"}, extra)
                 return
-            status = autopilot_store.save_venue_credentials(user["id"], "polymarket", {
+            payload: dict[str, Any] = {
                 "private_key": body["private_key"].strip(),
                 "funder": (body.get("funder") or "").strip(),
-            })
-            self._send_json(200, {"venue": status}, extra)
+            }
+            if body.get("signature_type") is not None and str(body.get("signature_type")).strip() != "":
+                payload["signature_type"] = int(body["signature_type"])
+            check = user_venue.verify_polymarket_credentials(payload)
+            if check.get("error"):
+                self._send_json(400, {"error": check["error"]}, extra)
+                return
+            if check.get("signature_type") is not None:
+                payload["signature_type"] = int(check["signature_type"])
+            status = autopilot_store.save_venue_credentials(user["id"], "polymarket", payload)
+            self._send_json(200, {"venue": status, "balance": check}, extra)
             return
 
         if path == "/api/autopilot/connect/cryptocom":

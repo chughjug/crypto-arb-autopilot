@@ -228,9 +228,19 @@
       <div class="ap-venue-head"><span class="badge poly">Polymarket</span><span class="spacer"></span><span class="ap-conn" id="pConn">…</span></div>
       <div class="ap-venue-meta" id="pMeta"></div>
       <div id="pForm">
-        <label class="ap-field"><span>Wallet private key</span><input id="pKey" type="password" autocomplete="off" /></label>
-        <label class="ap-field"><span>Funder / proxy address</span><input id="pFunder" placeholder="0x…" autocomplete="off" />
-          <span class="hint">Used for live CLOB order placement.</span></label>
+        <label class="ap-field"><span>Wallet private key</span><input id="pKey" type="password" autocomplete="off" />
+          <span class="hint">From <a href="https://reveal.magic.link" target="_blank" rel="noopener">reveal.magic.link</a> — same email as Polymarket login.</span></label>
+        <label class="ap-field"><span>Funder address</span><input id="pFunder" placeholder="0x…" autocomplete="off" />
+          <span class="hint">From polymarket.com/settings — proxy wallet (email) or “For API use only”.</span></label>
+        <label class="ap-field"><span>Signature type</span>
+          <select id="pSigType">
+            <option value="">Auto-detect</option>
+            <option value="1">1 · email/Magic proxy</option>
+            <option value="3">3 · API deposit wallet</option>
+            <option value="2">2 · Gnosis Safe</option>
+            <option value="0">0 · EOA (MetaMask)</option>
+          </select>
+          <span class="hint">Leave on Auto unless you know your wallet type.</span></label>
         <button class="btn sm" id="pConnect">Connect Polymarket</button>
       </div>
       <div class="ap-row" id="pActions" hidden>
@@ -725,12 +735,20 @@ $('stratSearch').oninput = () => { search = $('stratSearch').value.trim().toLowe
 /* venue connect / disconnect / edit */
 function venueMsg(p, text, cls) { const el = $(p + 'Msg'); el.textContent = text || ''; el.className = 'ap-msg' + (cls ? ' ' + cls : ''); }
 
+function venueConnectCash(balance) {
+  if (!balance || balance.error) return null;
+  if (balance.usdc != null) return balance.usdc;
+  if (balance.cash_cents != null) return balance.cash_cents / 100;
+  if (balance.equity_cents != null) return balance.equity_cents / 100;
+  return null;
+}
+
 async function connectVenue(p, path, body) {
   venueMsg(p, 'Verifying…');
   try {
     const d = await post(path, body);
-    const cash = d.balance?.cash_cents;
-    venueMsg(p, 'Connected' + (cash != null ? ` · ${fmtUsd(cash / 100)} available` : ''), 'ok');
+    const cash = venueConnectCash(d.balance);
+    venueMsg(p, 'Connected' + (cash != null ? ` · ${fmtUsd(cash)} available` : ''), 'ok');
     $(p + 'Form').dataset.editing = '';
     await refreshStatus(); refreshBalances();
   } catch (e) { venueMsg(p, e.message, 'err'); }
@@ -739,9 +757,12 @@ async function connectVenue(p, path, body) {
 $('kConnect').onclick = () => connectVenue('k', '/api/autopilot/connect/kalshi', {
   api_key: $('kApiKey').value, private_key: $('kPem').value, demo: $('kDemo').value === '1',
 });
-$('pConnect').onclick = () => connectVenue('p', '/api/autopilot/connect/polymarket', {
-  private_key: $('pKey').value, funder: $('pFunder').value,
-});
+$('pConnect').onclick = () => {
+  const body = { private_key: $('pKey').value, funder: $('pFunder').value };
+  const sig = $('pSigType').value;
+  if (sig !== '') body.signature_type = parseInt(sig, 10);
+  connectVenue('p', '/api/autopilot/connect/polymarket', body);
+};
 $('ccConnect').onclick = () => connectVenue('cc', '/api/autopilot/connect/cryptocom', {
   api_key: $('ccApiKey').value, api_secret: $('ccSecret').value,
 });
