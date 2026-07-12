@@ -667,6 +667,48 @@
       </div></section>
 
       <section class="card" style="margin-top:14px"><div class="card-pad">
+        <div class="bk-card-title">
+          <h3>API feed &amp; network health</h3>
+          <span class="sub">real-time checks on oracle connection, latencies, and exchange APIs</span>
+        </div>
+        <div class="bk-minigrid" id="feedHealthGrid"></div>
+      </div></section>
+
+      <section class="card" style="margin-top:14px"><div class="card-pad">
+        <div class="bk-card-title">
+          <h3>Sizing &amp; skip funnel</h3>
+          <span class="sub">why scanned arbs were filtered or bypassed by the runner</span>
+        </div>
+        <div class="bk-vs">
+          <div class="bk-vs-col">
+            <h4>Filtering stats</h4>
+            <div class="bk-minigrid" id="funnelStatsGrid"></div>
+          </div>
+          <div class="bk-vs-col">
+            <h4>Bypassed reasons</h4>
+            <div class="bk-minigrid" id="funnelReasonsGrid"></div>
+          </div>
+        </div>
+      </div></section>
+
+      <section class="card" style="margin-top:14px"><div class="card-pad">
+        <div class="bk-card-title">
+          <h3>Sizing &amp; risk profiles</h3>
+          <span class="sub">risk characteristics, drawdowns, and variance comparisons</span>
+        </div>
+        <div class="bk-vs">
+          <div class="bk-vs-col">
+            <h4>Live risk profile</h4>
+            <div class="bk-minigrid" id="liveRiskProfile"></div>
+          </div>
+          <div class="bk-vs-col">
+            <h4>Paper bot risk profile</h4>
+            <div class="bk-minigrid" id="paperRiskProfile"></div>
+          </div>
+        </div>
+      </div></section>
+
+      <section class="card" style="margin-top:14px"><div class="card-pad">
         <div class="bk-card-title"><h3 id="benchLabel">Paper benchmark</h3><span class="sub">same sizing model on an independent $50 paper bankroll</span></div>
         <div class="bk-vs">
           <div class="bk-vs-col"><h4>Your live execution</h4><div class="bk-minigrid" id="liveBench"></div></div>
@@ -1623,6 +1665,72 @@ function renderBankroll(d) {
   if (activeBkTab === 'overview') requestAnimationFrame(() => drawEquity(d.equity_curve));
   renderHeatmap();
   renderCalibration(d.calibration);
+
+  // API feed & network health
+  const scStats = d.scanner?.stats || {};
+  const cl = scStats.polymarket_chainlink || {};
+  const activeVenues = scStats.venues_live || [];
+  
+  const oracleStatus = cl.connected 
+    ? `<span class="good">Connected</span> (${cl.references || 0} feeds)` 
+    : '<span class="bad">Disconnected</span>';
+  const oracleDelay = cl.max_verified_delay_ms != null 
+    ? `${(cl.max_verified_delay_ms / 1000).toFixed(1)}s max delay` 
+    : '—';
+  
+  const connectedVenuesStr = (d.venues || []).map(v => {
+    const isLive = activeVenues.includes(v.venue);
+    const statusText = v.connected ? (isLive ? '<b class="good">active</b>' : 'linked') : '<span style="color:var(--muted-2)">unlinked</span>';
+    return `${v.label || v.venue}: ${statusText}`;
+  }).join(' · ');
+
+  $('feedHealthGrid').innerHTML =
+    bkMini('Oracle status', oracleStatus) +
+    bkMini('Oracle delay', oracleDelay) +
+    bkMini('Scan interval', scStats.poll_seconds != null ? `${scStats.poll_seconds}s polling` : '—') +
+    bkMini('API connections', connectedVenuesStr || '—');
+
+  // Sizing & skip funnel
+  const fn = paper.funnel || {};
+  $('funnelStatsGrid').innerHTML =
+    bkMini('Scans', fn.scans ?? '—') +
+    bkMini('Scanned arbs', fn.scanned ?? '—') +
+    bkMini('Eligible arbs', fn.eligible ?? '—') +
+    bkMini('Arbs executed', fn.taken ?? '—') +
+    bkMini('Take rate', fn.take_rate_pct != null ? `${Number(fn.take_rate_pct).toFixed(1)}%` : '—');
+
+  const skipReasons = Object.entries(fn.skip_reasons || {});
+  $('funnelReasonsGrid').innerHTML = skipReasons.length
+    ? skipReasons.map(([reason, count]) => {
+        let label = reason;
+        if (reason === 'size_zero') label = 'Zero size / empty book';
+        else if (reason === 'strike_gap') label = 'Exceeds strike gap limit';
+        else if (reason === 'edge_too_low') label = 'Edge below minimum';
+        else if (reason === 'exposure_limit') label = 'Exposure limit reached';
+        return bkMini(label, `${count} times`);
+      }).join('')
+    : '<div class="bk-empty" style="grid-column: 1/-1">No arbs skipped yet in this run.</div>';
+
+  // Sizing & risk profiles
+  const pmRisk = paper.risk_metrics || {};
+  const liveRisk = d.execution_risk || {};
+  const liveWinRate = d.trade_stats?.filled && d.trade_stats?.settled 
+    ? (d.trade_stats.filled / d.trade_stats.settled * 100).toFixed(1) + '%' 
+    : '—';
+
+  $('liveRiskProfile').innerHTML =
+    bkMini('Open exposure', liveRisk.open_exposure_pct != null ? `${liveRisk.open_exposure_pct}%` : '—') +
+    bkMini('Concentration', liveRisk.open_concentration_pct != null ? `${liveRisk.open_concentration_pct}%` : '—') +
+    bkMini('Avg spread / fill', liveRisk.avg_spread_cents != null ? `${liveRisk.avg_spread_cents.toFixed(2)}¢` : '—') +
+    bkMini('Win rate est.', liveWinRate);
+
+  $('paperRiskProfile').innerHTML =
+    bkMini('Max drawdown', pmRisk.max_drawdown_pct != null ? `${Number(pmRisk.max_drawdown_pct).toFixed(2)}%` : '—') +
+    bkMini('Open exposure', pmRisk.open_exposure_pct != null ? `${Number(pmRisk.open_exposure_pct).toFixed(2)}%` : '—') +
+    bkMini('Concentration', pmRisk.open_concentration_pct != null ? `${Number(pmRisk.open_concentration_pct).toFixed(2)}%` : '—') +
+    bkMini('Volatility (Std)', pmRisk.return_std_pct != null ? `${Number(pmRisk.return_std_pct).toFixed(2)}%` : '—') +
+    bkMini('Profit factor', pmRisk.profit_factor != null ? Number(pmRisk.profit_factor).toFixed(2) : '—') +
+    bkMini('Avg strike gap', pmRisk.avg_strike_gap_pct != null ? `${(Number(pmRisk.avg_strike_gap_pct) * 100).toFixed(2)}%` : '—');
 
   $('benchLabel').textContent = paper.label ? `${paper.label} — live vs paper` : 'No paper benchmark for this strategy';
   $('liveBench').innerHTML =
