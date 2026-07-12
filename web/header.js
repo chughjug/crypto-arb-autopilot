@@ -7,12 +7,11 @@
     markets:   { href: "/crypto", label: "Markets", match: p => p === "/crypto" || p.startsWith("/crypto-market") },
     arb:       { href: "/cryptoarbitrage", label: "Arb scanner", match: p => p.startsWith("/cryptoarbitrage") || p === "/cryptoarb" },
     bots:      { href: "/bots", label: "Bots", match: p => p === "/bots" },
-    autopilot: { href: "/autopilot", label: "Autopilot", match: p => p === "/autopilot" },
-    bankroll:  { href: "/bankroll", label: "Bankroll", match: p => p === "/bankroll" },
+    autopilot: { href: "/autopilot", label: "Autopilot", match: p => p === "/autopilot" || p === "/bankroll" },
     account:   { href: "/account", label: "Account", match: p => p === "/account" },
   };
 
-  const PRIMARY = [N.markets, N.arb, N.bots, N.autopilot, N.bankroll];
+  const PRIMARY = [N.markets, N.arb, N.bots, N.autopilot];
 
   const SECTIONS = [
     {

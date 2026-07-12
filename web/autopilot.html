@@ -174,6 +174,97 @@
   .ap-detail { position: static; }
   .ap-list { max-height: 420px; }
 }
+
+/* ── Dashboard tabs ─────────────────────────────────────────────── */
+.dash-tabs { margin: 0 0 22px; }
+.dash-panel[hidden] { display: none !important; }
+
+/* ── Bankroll tab (from bankroll.html) ───────────────────────────── */
+.bk-pill {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: .4px;
+  background: var(--surface-2); color: var(--muted); border: 1px solid var(--border);
+}
+.bk-pill.running { background: var(--emerald-bg); color: var(--emerald); border-color: var(--emerald-border); }
+.bk-pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted-2); }
+.bk-pill.running .dot { background: var(--emerald); animation: live-pulse 2s infinite; }
+.bk-updated { font-size: 12px; color: var(--muted-2); margin-top: 8px; text-align: right; }
+.bk-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.bk-chip {
+  padding: 5px 12px; border-radius: 999px; font-size: 12px; font-weight: 600;
+  border: 1px solid var(--border); background: var(--surface-2); color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.bk-chip.on { background: var(--emerald-bg); color: #065f46; border-color: var(--emerald-border); }
+.bk-chip.live { background: var(--amber-bg); color: var(--amber-text); border-color: var(--amber-border); }
+.bk-chip.err { background: var(--red-bg); color: var(--red); border-color: rgba(220,38,38,.25); }
+.bk-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 10px; margin-top: 14px; }
+.bk-stat { padding: 11px 14px; border-radius: var(--radius-sm); background: var(--surface-2); border: 1px solid var(--border); }
+.bk-stat b { display: block; font-size: 18px; font-weight: 800; letter-spacing: -.4px; font-variant-numeric: tabular-nums; }
+.bk-stat span { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--muted-2); }
+.bk-stat b.good { color: var(--emerald); } .bk-stat b.bad { color: var(--red); }
+.bk-grid-2 { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 14px; margin-top: 14px; align-items: start; }
+.bk-grid-even { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; align-items: start; }
+@media (max-width: 900px) { .bk-grid-2, .bk-grid-even { grid-template-columns: 1fr; } }
+.bk-card-title { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+.bk-card-title h3 { margin: 0; font-size: 14px; font-weight: 800; letter-spacing: -.2px; }
+.bk-card-title .sub { font-size: 12px; color: var(--muted); }
+.bk-card-title .right { margin-left: auto; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.bk-card-title .right b { color: var(--ink); }
+#equityChart { display: block; width: 100%; height: 220px; margin-top: 10px;
+  border-radius: var(--radius-sm); background: var(--surface-2); border: 1px solid var(--border); }
+.bk-minigrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; margin-top: 10px; }
+.bk-mini { padding: 9px 11px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--border); }
+.bk-mini span { display: block; font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; color: var(--muted-2); }
+.bk-mini b { display: block; margin-top: 2px; font-size: 13.5px; font-weight: 800; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bk-mini b.good { color: var(--emerald); } .bk-mini b.bad { color: var(--red); }
+.bk-table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 10px; }
+.bk-table th { text-align: left; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px;
+  color: var(--muted-2); padding: 8px 10px; border-bottom: 1px solid var(--border-strong); background: var(--surface-2); }
+.bk-table td { padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.bk-table tr:last-child td { border-bottom: 0; }
+.bk-table th.r, .bk-table td.r { text-align: right; font-variant-numeric: tabular-nums; }
+.bk-table .good { color: var(--emerald); font-weight: 700; }
+.bk-table .bad { color: var(--red); font-weight: 700; }
+.bk-tablewrap { border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: auto; max-height: 380px; margin-top: 10px; }
+.bk-tablewrap .bk-table { margin-top: 0; }
+.bk-tablewrap .bk-table th { position: sticky; top: 0; }
+.bk-alloc-bar { display: flex; height: 12px; border-radius: 999px; overflow: hidden; margin: 12px 0; border: 1px solid var(--border); }
+.bk-alloc-bar span { display: block; height: 100%; }
+.bk-alloc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+.bk-alloc-card { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 11px 13px; background: var(--surface-2); }
+.bk-alloc-top { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.bk-alloc-top i { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.bk-alloc-top b { font-weight: 800; }
+.bk-alloc-top strong { margin-left: auto; font-variant-numeric: tabular-nums; }
+.bk-alloc-amt { margin-top: 5px; font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.bk-alloc-amt small { color: var(--muted-2); font-weight: 500; }
+.bk-alloc-card dl { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; margin: 9px 0 0; }
+.bk-alloc-card dt { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; color: var(--muted-2); }
+.bk-alloc-card dd { margin: 0; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.bk-heat-row { display: grid; grid-template-columns: repeat(var(--heat-cols, 4), minmax(86px, 1fr)); gap: 8px; margin-top: 12px; overflow-x: auto; }
+.bk-heat-cell {
+  border-radius: 10px; padding: 12px 10px; text-align: center; border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--emerald) calc(var(--heat, 0) * 55%), var(--surface-2));
+}
+.bk-heat-cell b { display: block; font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.bk-heat-cell span { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--ink-2); }
+.bk-heat-cell small { display: block; margin-top: 2px; font-size: 10.5px; color: var(--muted); }
+.bk-vs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+@media (max-width: 700px) { .bk-vs { grid-template-columns: 1fr; } }
+.bk-vs-col { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 13px 15px; }
+.bk-vs-col h4 { margin: 0 0 8px; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; color: var(--muted-2); }
+.bk-note { font-size: 11.5px; color: var(--muted-2); margin: 10px 0 0; line-height: 1.45; }
+.bk-log { max-height: 300px; overflow: auto; font-size: 12px; font-family: ui-monospace, SFMono-Regular, monospace; margin-top: 10px; }
+.bk-log > div { padding: 5px 0; border-bottom: 1px dashed var(--border); display: flex; gap: 9px; }
+.bk-log .t { color: var(--muted-2); flex-shrink: 0; }
+.bk-log .lv { flex-shrink: 0; font-weight: 700; text-transform: uppercase; font-size: 10.5px; padding-top: 1px; color: var(--muted); }
+.bk-log .lv.warn { color: var(--amber-text); }
+.bk-log .lv.error { color: var(--red); }
+.bk-log .d { color: var(--muted-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bk-empty { padding: 22px; text-align: center; color: var(--muted-2); font-size: 12.5px; font-style: italic; }
+.bk-act-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
 </style>
 <script src="/viewmode.js"></script>
 </head>
@@ -184,12 +275,20 @@
   <div class="page-head" style="display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap">
     <div style="flex:1;min-width:240px">
       <h1>Autopilot</h1>
-      <p>Link your venues, pick a sizing model, set a bankroll — the bot scans every few seconds and executes qualifying arbs for you. Track results on the <a href="/bankroll" style="text-decoration:underline">bankroll dashboard</a>.</p>
+      <p>Link venues, pick a sizing model, and set bankroll — then monitor capital, fills, and performance from the Bankroll tab.</p>
     </div>
-    <span class="ap-status-pill" id="statusPill"><span class="dot"></span><span id="statusPillText">Loading…</span></span>
+    <div>
+      <span class="ap-status-pill" id="statusPill"><span class="dot"></span><span id="statusPillText">Loading…</span></span>
+      <div class="bk-updated" id="updatedAt" hidden>—</div>
+    </div>
   </div>
 
-  <!-- ── Mission control ─────────────────────────────────────────── -->
+  <div class="seg dash-tabs" id="dashTabs" role="tablist">
+    <button type="button" class="on" data-tab="autopilot" role="tab" aria-selected="true">Autopilot</button>
+    <button type="button" data-tab="bankroll" role="tab" aria-selected="false">Bankroll</button>
+  </div>
+
+  <div id="tabAutopilot" class="dash-panel" role="tabpanel">
   <section class="card ap-hero">
     <div class="card-pad">
       <div class="ap-hero-top">
@@ -315,7 +414,7 @@
   </div>
 
   <!-- ── Activity ────────────────────────────────────────────────── -->
-  <div class="section-head"><h2>Activity</h2><span class="hint">trade ledger, runner health, and the decision log — full analytics on the <a href="/bankroll" style="text-decoration:underline">bankroll dashboard</a></span></div>
+  <div class="section-head"><h2>Activity</h2><span class="hint">trade ledger, runner health, and the decision log — see the <a href="/autopilot?tab=bankroll" style="text-decoration:underline">Bankroll tab</a> for full analytics</span></div>
   <div class="ap-activity-grid">
     <section class="card"><div class="card-pad">
       <div class="ap-act-head">
@@ -331,8 +430,104 @@
       <div class="ap-hero-stats" id="tradeStats" style="margin:0 0 14px"></div>
       <h4 class="ap-act-title">Decision log</h4>
       <div class="ap-log" id="logs"><div>—</div></div>
-    </div></section>
+    </div>    </section>
   </div>
+  </div><!-- /tabAutopilot -->
+
+  <div id="tabBankroll" class="dash-panel" role="tabpanel" hidden>
+    <section class="card"><div class="card-pad">
+      <div class="bk-chips" id="metaChips"><span class="bk-chip">Loading…</span></div>
+      <div class="bk-kpis" id="kpis"></div>
+    </div></section>
+
+    <div class="bk-grid-2">
+      <section class="card"><div class="card-pad">
+        <div class="bk-card-title"><h3>Equity path</h3><span class="sub">bankroll + cumulative locked edge on fills</span></div>
+        <canvas id="equityChart" height="220"></canvas>
+      </div></section>
+      <section class="card"><div class="card-pad">
+        <div class="bk-card-title"><h3>Runner health</h3><span class="right" id="runnerState">—</span></div>
+        <div class="bk-minigrid" id="runnerGrid"></div>
+        <div class="bk-card-title" style="margin-top:16px"><h3>Scanner</h3><span class="right" id="scannerStat">—</span></div>
+        <div class="bk-minigrid" id="scannerGrid"></div>
+      </div></section>
+    </div>
+
+    <div class="bk-grid-even">
+      <section class="card"><div class="card-pad">
+        <div class="bk-card-title"><h3>Capital summary</h3><span class="sub">deployable vs venue cash vs pending</span></div>
+        <div class="bk-minigrid" id="capitalGrid"></div>
+      </div></section>
+      <section class="card"><div class="card-pad">
+        <div class="bk-card-title"><h3>Active strategy</h3><span class="right" id="stratName">—</span></div>
+        <div class="bk-minigrid" id="stratGrid"></div>
+        <p class="bk-note" id="stratNote"></p>
+      </div></section>
+    </div>
+
+    <div class="section-head"><h2>Venues</h2><span class="hint">live balances and recommended capital split</span></div>
+    <div class="bk-grid-even">
+      <section class="card"><div class="card-pad">
+        <div class="bk-card-title"><h3>Balances</h3></div>
+        <table class="bk-table" id="venueTable">
+          <thead><tr><th>Venue</th><th>Status</th><th class="r">Cash</th><th>Details</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div></section>
+      <section class="card"><div class="card-pad">
+        <div class="bk-card-title"><h3>Recommended allocation</h3><span class="sub">from execution leg history</span></div>
+        <div id="venueAllocator"><div class="bk-empty">Loading…</div></div>
+      </div></section>
+    </div>
+
+    <div class="section-head"><h2>Executions</h2><span class="hint">every attempt the runner made, newest first</span></div>
+    <div class="bk-grid-2">
+      <section class="card"><div class="card-pad">
+        <div class="bk-act-head">
+          <div class="apl-tabs" id="bkTlTabs"></div>
+          <span class="apl-sum" id="bkTlSum" style="margin-left:auto">—</span>
+        </div>
+        <div class="apl-list" id="bkTlList" style="max-height:640px"><div class="bk-empty">Loading…</div></div>
+      </div></section>
+      <section class="card"><div class="card-pad">
+        <div class="bk-card-title"><h3>Execution risk</h3><span class="sub">fill quality &amp; exposure</span></div>
+        <div class="bk-minigrid" id="execRiskGrid"></div>
+        <div class="bk-card-title" style="margin-top:16px"><h3>Calibration</h3><span class="sub">predicted vs realized</span></div>
+        <div id="calibrationPanel"><div class="bk-empty">—</div></div>
+      </div></section>
+    </div>
+
+    <div class="section-head"><h2>Deployment</h2><span class="hint">where your contracts actually went</span></div>
+    <section class="card"><div class="card-pad">
+      <div class="bk-card-title">
+        <h3 id="heatmapTitle">Spread deployment</h3>
+        <span class="sub" id="heatmapCopy">fills by entry spread width</span>
+        <div class="seg" style="margin-left:auto" id="heatMode">
+          <button type="button" class="on" data-mode="spread">Spread</button>
+          <button type="button" data-mode="coin">Coin</button>
+          <button type="button" data-mode="expiry">Expiry</button>
+        </div>
+      </div>
+      <div class="bk-heat-row" id="heatRow"></div>
+      <p class="bk-note" id="heatNote">Spread = $1 − YES − NO. Darker cells hold more contracts.</p>
+    </div></section>
+
+    <div class="section-head"><h2>Paper benchmark</h2><span class="hint">same sizing model on an independent $50 paper bankroll</span></div>
+    <section class="card"><div class="card-pad">
+      <div class="bk-card-title"><h3 id="benchLabel">—</h3></div>
+      <div class="bk-vs">
+        <div class="bk-vs-col"><h4>Your live execution</h4><div class="bk-minigrid" id="liveBench"></div></div>
+        <div class="bk-vs-col"><h4>Paper benchmark</h4><div class="bk-minigrid" id="paperBench"></div></div>
+      </div>
+      <p class="bk-note" id="benchNote"></p>
+    </div></section>
+
+    <div class="section-head"><h2>Activity log</h2><span class="hint">recent autopilot events</span></div>
+    <section class="card"><div class="card-pad">
+      <div class="bk-log" id="activityLog"><div>—</div></div>
+    </div></section>
+  </div><!-- /tabBankroll -->
+
 </div>
 
 <div class="ap-savebar" id="saveBar" hidden>
@@ -839,10 +1034,350 @@ document.querySelectorAll('[data-disconnect]').forEach(btn => {
   };
 });
 
+/* ── dashboard tabs ───────────────────────────────────────────── */
+let activeTab = 'autopilot';
+let bkStarted = false;
+let bkInterval = null;
+
+function tabFromUrl() {
+  const q = new URLSearchParams(location.search).get('tab');
+  if (q === 'bankroll' || location.hash === '#bankroll') return 'bankroll';
+  return 'autopilot';
+}
+
+function setTab(tab, pushUrl = true) {
+  activeTab = tab;
+  $('tabAutopilot').hidden = tab !== 'autopilot';
+  $('tabBankroll').hidden = tab !== 'bankroll';
+  $('updatedAt').hidden = tab !== 'bankroll';
+  $('dashTabs').querySelectorAll('button').forEach(btn => {
+    const on = btn.dataset.tab === tab;
+    btn.classList.toggle('on', on);
+    btn.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  const url = tab === 'bankroll' ? '/autopilot?tab=bankroll' : '/autopilot';
+  if (pushUrl && (location.pathname + location.search) !== url) {
+    history.replaceState({ tab }, '', url);
+  }
+  if (tab === 'bankroll') startBankroll();
+  else if (dirty) $('saveBar').hidden = false;
+  else $('saveBar').hidden = true;
+}
+
+$('dashTabs').querySelectorAll('button').forEach(btn => {
+  btn.onclick = () => setTab(btn.dataset.tab);
+});
+document.querySelectorAll('a[href="/autopilot?tab=bankroll"]').forEach(a => {
+  a.addEventListener('click', e => { e.preventDefault(); setTab('bankroll'); });
+});
+
+/* ── bankroll tab ─────────────────────────────────────────────── */
+const money = ApLedger.money, pnlFmt = ApLedger.pnlFmt;
+const pnlCls = v => (v == null ? '' : (Number(v) > 0 ? 'good' : (Number(v) < 0 ? 'bad' : '')));
+const fmtTime = ts => ts ? new Date(ts * 1000).toLocaleString(undefined, {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'}) : '—';
+
+const SPREAD_BUCKETS = [
+  {id:'micro', label:'< 2¢'}, {id:'small', label:'2–5¢'},
+  {id:'medium', label:'5–10¢'}, {id:'wide', label:'10¢+'},
+];
+const EXPIRY_BUCKETS = [
+  {id:'lt_1m', label:'< 1m'}, {id:'m1_5', label:'1–5m'},
+  {id:'m5_15', label:'5–15m'}, {id:'gt_15m', label:'15m+'},
+];
+
+let bkData = null;
+let heatMode = 'spread';
+let bkTlFilter = 'all';
+
+const bkStat = (label, value, cls) =>
+  `<div class="bk-stat"><b class="${cls || ''}">${value}</b><span>${label}</span></div>`;
+const bkMini = (label, value, cls) =>
+  `<div class="bk-mini"><span>${label}</span><b class="${cls || ''}">${value}</b></div>`;
+
+function drawEquity(curve) {
+  const canvas = $('equityChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  const pts = curve || [];
+  if (pts.length < 2) {
+    ctx.fillStyle = '#94a3b8'; ctx.font = '12px Inter, sans-serif';
+    ctx.fillText('No fills yet — equity flat at bankroll', 16, h / 2);
+    return;
+  }
+  const xs = pts.map(p => p.ts), ys = pts.map(p => p.equity);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys) * 0.998, maxY = Math.max(...ys) * 1.002 || 1;
+  const pad = 14;
+  const plot = (ts, eq) => ({
+    x: pad + (ts - minX) / (maxX - minX || 1) * (w - pad * 2),
+    y: h - pad - (eq - minY) / (maxY - minY || 1) * (h - pad * 2),
+  });
+  ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1;
+  for (let i = 0; i < 4; i++) {
+    const y = pad + i * (h - pad * 2) / 3;
+    ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(w - pad, y); ctx.stroke();
+  }
+  ctx.beginPath();
+  pts.forEach((p, i) => { const {x, y} = plot(p.ts, p.equity); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+  const lastPt = plot(pts[pts.length - 1].ts, pts[pts.length - 1].equity);
+  const firstPt = plot(pts[0].ts, pts[0].equity);
+  ctx.lineTo(lastPt.x, h - pad); ctx.lineTo(firstPt.x, h - pad); ctx.closePath();
+  ctx.fillStyle = 'rgba(5,150,105,.08)'; ctx.fill();
+  ctx.beginPath();
+  pts.forEach((p, i) => { const {x, y} = plot(p.ts, p.equity); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+  ctx.strokeStyle = '#059669'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = '#059669';
+  ctx.beginPath(); ctx.arc(lastPt.x, lastPt.y, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#64748b'; ctx.font = '11px Inter, sans-serif';
+  ctx.fillText(money(pts[0].equity), pad + 2, firstPt.y - 6);
+  ctx.textAlign = 'right';
+  ctx.fillText(money(pts[pts.length - 1].equity), w - pad - 2, lastPt.y - 8);
+  ctx.textAlign = 'left';
+}
+
+function renderAllocator(alloc) {
+  if (!alloc?.venues?.length) {
+    $('venueAllocator').innerHTML = '<div class="bk-empty">No execution leg history yet — the allocator needs fills.</div>';
+    return;
+  }
+  const palette = {cryptocom:'#1199fa', kalshi:'#047857', polymarket:'#8b5cf6'};
+  const bars = alloc.venues.map(v =>
+    `<span style="width:${v.recommended_pct}%;background:${palette[v.venue] || '#94a3b8'}"></span>`).join('');
+  const cards = alloc.venues.map(v => {
+    const flow = Number(v.settlement_cash_flow || 0);
+    return `<div class="bk-alloc-card">
+      <div class="bk-alloc-top"><i style="background:${palette[v.venue] || '#94a3b8'}"></i><b>${esc(v.label)}</b><strong>${Number(v.recommended_pct).toFixed(1)}%</strong></div>
+      <div class="bk-alloc-amt">${money(v.recommended_amount)} <small>of ${money(alloc.bankroll)}</small></div>
+      <dl>
+        <div><dt>Open</dt><dd>${money(v.open_committed)}</dd></div>
+        <div><dt>Observed</dt><dd>${money(v.historical_notional)}</dd></div>
+        <div><dt>Flow</dt><dd class="${pnlCls(flow)}">${pnlFmt(flow)}</dd></div>
+        <div><dt>Legs</dt><dd>${v.legs}</dd></div>
+      </dl>
+    </div>`;
+  }).join('');
+  $('venueAllocator').innerHTML =
+    `<p class="bk-note" style="margin-top:4px">${esc(alloc.method || '')} · confidence <b>${Number(alloc.confidence_pct || 0).toFixed(0)}%</b> on ${alloc.sample_legs} legs</p>` +
+    `<div class="bk-alloc-bar">${bars}</div><div class="bk-alloc-grid">${cards}</div>`;
+}
+
+function renderHeatmap() {
+  if (!bkData) return;
+  const titles = {spread:'Spread deployment', coin:'Coin deployment', expiry:'Expiry deployment'};
+  const copies = {spread:'fills by entry spread width', coin:'fills by underlying coin', expiry:'time-to-expiry at entry'};
+  $('heatmapTitle').textContent = titles[heatMode];
+  $('heatmapCopy').textContent = copies[heatMode];
+  let buckets, stats;
+  if (heatMode === 'coin') {
+    buckets = Object.keys(bkData.coin_stats || {}).map(k => ({id:k, label:k}));
+    stats = bkData.coin_stats || {};
+  } else if (heatMode === 'expiry') {
+    buckets = EXPIRY_BUCKETS; stats = bkData.expiry_stats || {};
+  } else {
+    buckets = SPREAD_BUCKETS; stats = bkData.spread_stats || {};
+  }
+  if (!buckets.length) {
+    $('heatRow').innerHTML = '<div class="bk-empty" style="grid-column:1/-1">No fills yet.</div>';
+    return;
+  }
+  const values = buckets.map(b => Math.abs(Number((stats[b.id] || {}).contracts || 0)));
+  const max = Math.max(1, ...values);
+  $('heatRow').style.setProperty('--heat-cols', String(buckets.length));
+  $('heatRow').innerHTML = buckets.map(b => {
+    const cell = stats[b.id] || {};
+    const raw = Number(cell.contracts || 0);
+    const heat = raw ? Math.max(.12, raw / max) : 0;
+    return `<div class="bk-heat-cell" style="--heat:${heat.toFixed(3)}">
+      <span>${esc(b.label)}</span><b>${raw ? raw + '×' : '—'}</b>
+      <small>${cell.trades || 0} trades${cell.pnl != null ? ' · ' + pnlFmt(cell.pnl) : ''}</small></div>`;
+  }).join('');
+}
+
+function renderCalibration(cal) {
+  if (!cal?.buckets?.length) {
+    $('calibrationPanel').innerHTML = '<div class="bk-empty">Needs settled trades.</div>';
+    return;
+  }
+  const rows = cal.buckets.map(b =>
+    `<tr><td>${esc(b.label)}</td><td class="r">${b.n}</td>` +
+    `<td class="r">${b.avg_predicted != null ? money(b.avg_predicted) : '—'}</td>` +
+    `<td class="r">${b.avg_realized != null ? money(b.avg_realized) : '—'}</td>` +
+    `<td class="r ${pnlCls(b.avg_error)}">${b.avg_error != null ? pnlFmt(b.avg_error) : '—'}</td>` +
+    `<td class="r">${b.win_rate != null ? b.win_rate + '%' : '—'}</td></tr>`
+  ).join('');
+  $('calibrationPanel').innerHTML =
+    `<table class="bk-table"><thead><tr><th>Bucket</th><th class="r">n</th><th class="r">Pred</th><th class="r">Real</th><th class="r">Err</th><th class="r">Win%</th></tr></thead><tbody>${rows}</tbody></table>` +
+    (cal.sparse ? '<p class="bk-note">Sparse sample (&lt;5 settled) — treat as indicative only.</p>' : '');
+}
+
+function renderBkLedger() {
+  const trades = bkData?.stored_trades?.length ? bkData.stored_trades : (bkData?.executions || []);
+  ApLedger.renderList($('bkTlList'), trades, bkTlFilter);
+  $('bkTlSum').innerHTML = ApLedger.summaryHtml(trades, bkData?.trade_stats);
+  $('bkTlTabs').innerHTML = ApLedger.tabsHtml(bkTlFilter);
+  $('bkTlTabs').querySelectorAll('.apl-tab').forEach(btn => {
+    btn.onclick = () => { bkTlFilter = btn.dataset.filter; renderBkLedger(); };
+  });
+}
+
+function renderBankroll(d) {
+  bkData = d;
+  const s = d.summary || {};
+  const r = d.runner || {};
+  const strat = d.strategy || {};
+  const risk = d.execution_risk || {};
+  const paper = d.paper_benchmark || {};
+  const scanner = d.scanner || {};
+
+  const pill = $('statusPill');
+  pill.classList.toggle('running', !!s.running);
+  $('statusPillText').textContent = s.running ? (s.live_mode ? 'Running · live' : 'Running · paper') : 'Stopped';
+  $('updatedAt').textContent = 'Updated ' + new Date((d.updated_at || 0) * 1000).toLocaleTimeString();
+
+  $('metaChips').innerHTML =
+    `<span class="bk-chip ${s.live_mode ? 'live' : ''}">${s.live_mode ? 'Live orders' : 'Paper / demo'}</span>` +
+    `<span class="bk-chip">${esc(strat.label || d.config?.strategy_id || '—')}</span>` +
+    `<span class="bk-chip ${s.venues_connected >= 2 ? 'on' : ''}">${s.venues_connected}/3 venues · ${s.venues_ready} ready</span>` +
+    `<span class="bk-chip">${esc(d.db || '')}</span>`;
+
+  $('kpis').innerHTML =
+    bkStat('Equity est.', money(s.equity_estimate_usd)) +
+    bkStat('Bankroll', money(s.bankroll_usd)) +
+    bkStat('Deployable', money(s.deployable_usd)) +
+    bkStat('Venue cash', s.venue_cash_total_usd != null ? money(s.venue_cash_total_usd) : '—') +
+    bkStat('Pending locked', pnlFmt(s.pending_locked_usd), pnlCls(s.pending_locked_usd)) +
+    bkStat('Return est.', s.return_estimate_pct != null ? s.return_estimate_pct.toFixed(2) + '%' : '—', pnlCls(s.return_estimate_pct)) +
+    bkStat('Fill rate', risk.fill_rate_pct != null ? risk.fill_rate_pct + '%' : '—') +
+    bkStat('Scanner arbs', String(scanner.opportunity_count ?? '—'), 'good');
+
+  $('runnerState').innerHTML = r.thread_alive
+    ? '<b style="color:var(--emerald)">thread alive</b>' : 'thread stopped';
+  $('runnerGrid').innerHTML =
+    bkMini('Cycles', r.cycles ?? 0) +
+    bkMini('Attempts', r.attempts ?? 0) +
+    bkMini('Fills', r.fills ?? 0) +
+    bkMini('Attempt fill %', r.attempt_fill_rate_pct != null ? r.attempt_fill_rate_pct + '%' : '—') +
+    bkMini('Cycles / fill', r.cycles_per_fill ?? '—') +
+    bkMini('Last cycle', r.last_at ? fmtTime(r.last_at) : '—') +
+    bkMini('Last error', r.last_error ? esc(String(r.last_error)).slice(0, 60) : '—', r.last_error ? 'bad' : '');
+
+  const ss = scanner.stats || {};
+  $('scannerStat').textContent = (scanner.opportunity_count ?? 0) + ' opportunities';
+  $('scannerGrid').innerHTML =
+    bkMini('Matched pairs', ss.matched ?? '—') +
+    bkMini('Coins', ss.coins ?? '—') +
+    bkMini('Best edge', ss.best_edge_cents != null ? ss.best_edge_cents + '¢' : '—') +
+    bkMini('Poll', ss.poll_ms != null ? ss.poll_ms + 'ms' : '—');
+
+  $('capitalGrid').innerHTML =
+    bkMini('Reserve', s.reserve_pct + '% (' + money(s.reserve_usd) + ')') +
+    bkMini('Deployed cost', money(s.deployed_cost_usd)) +
+    bkMini('Cash gap', s.cash_gap_usd != null ? pnlFmt(s.cash_gap_usd) : '—', pnlCls(s.cash_gap_usd)) +
+    bkMini('Gap %', s.cash_gap_pct != null ? s.cash_gap_pct + '%' : '—') +
+    bkMini('Avg spread', s.avg_spread_cents != null ? s.avg_spread_cents.toFixed(2) + '¢' : '—') +
+    bkMini('Pending locked', pnlFmt(s.pending_locked_usd), pnlCls(s.pending_locked_usd));
+
+  $('stratName').innerHTML = `<b>${esc(strat.label || '—')}</b>${strat.risk ? ' · ' + esc(strat.risk) + ' risk' : ''}`;
+  $('stratGrid').innerHTML =
+    bkMini('Family', esc(strat.family || '—')) +
+    bkMini('Risk score', strat.risk_score != null ? strat.risk_score + '/10' : '—') +
+    bkMini('Min edge', strat.min_edge_cents != null ? strat.min_edge_cents + '¢' : '—') +
+    bkMini('Max strike gap', strat.max_strike_gap_pct != null ? strat.max_strike_gap_pct + '%' : '—') +
+    bkMini('Max deployed', strat.max_exposure_pct != null ? strat.max_exposure_pct + '%' : '—') +
+    bkMini('Max bet', strat.max_bet_pct != null ? strat.max_bet_pct + '%' : '—');
+  $('stratNote').textContent = strat.variance || '';
+
+  $('venueTable').querySelector('tbody').innerHTML = (d.venues || []).map(v =>
+    `<tr><td><b>${esc(v.label)}</b></td><td>` +
+    (v.connected ? (v.ready ? '<span class="good">Ready</span>' : 'Connected') : '<span style="color:var(--muted-2)">Not connected</span>') +
+    (v.error ? ` <span class="bad">${esc(v.error)}</span>` : '') +
+    `</td><td class="r">${v.cash_usd != null ? money(v.cash_usd) : '—'}</td><td style="color:var(--muted)">` +
+    (v.demo ? 'demo · ' : '') + esc(v.masked?.api_key || v.masked?.funder || '') + '</td></tr>'
+  ).join('') || '<tr><td colspan="4" class="bk-empty">No venues</td></tr>';
+
+  renderAllocator(d.venue_allocation);
+  renderBkLedger();
+
+  $('execRiskGrid').innerHTML =
+    bkMini('Executions', risk.execution_count ?? 0) +
+    bkMini('Filled', risk.filled_count ?? 0) +
+    bkMini('Failed', risk.failed_count ?? 0, (risk.failed_count || 0) > 0 ? 'bad' : '') +
+    bkMini('Contracts', risk.total_contracts ?? 0) +
+    bkMini('Live fills', risk.live_fill_count ?? 0) +
+    bkMini('Paper fills', risk.paper_fill_count ?? 0) +
+    bkMini('Open exposure', risk.open_exposure_pct != null ? risk.open_exposure_pct + '%' : '—') +
+    bkMini('Concentration', risk.open_concentration_pct != null ? risk.open_concentration_pct + '%' : '—') +
+    bkMini('Avg cost / fill', risk.avg_cost_per_fill != null ? money(risk.avg_cost_per_fill) : '—');
+
+  drawEquity(d.equity_curve);
+  renderHeatmap();
+  renderCalibration(d.calibration);
+
+  $('benchLabel').textContent = paper.label ? `${paper.label} — live vs paper` : 'No paper benchmark for this strategy';
+  $('liveBench').innerHTML =
+    bkMini('Fills', risk.filled_count ?? 0) +
+    bkMini('Pending', pnlFmt(s.pending_locked_usd), pnlCls(s.pending_locked_usd)) +
+    bkMini('Deployed', money(s.deployed_cost_usd)) +
+    bkMini('Return est.', s.return_estimate_pct != null ? s.return_estimate_pct.toFixed(2) + '%' : '—', pnlCls(s.return_estimate_pct));
+  $('paperBench').innerHTML = paper.label ? (
+    bkMini('Equity', money(paper.equity)) +
+    bkMini('Confirmed P&L', pnlFmt(paper.confirmed_pnl), pnlCls(paper.confirmed_pnl)) +
+    bkMini('Pending', pnlFmt(paper.locked_pending)) +
+    bkMini('Return', paper.return_pct != null ? paper.return_pct.toFixed(2) + '%' : '—', pnlCls(paper.return_pct)) +
+    bkMini('Open / settled', (paper.open_count ?? 0) + ' / ' + (paper.settled_count ?? 0)) +
+    bkMini('Win rate', paper.win_rate != null ? paper.win_rate + '%' : '—') +
+    bkMini('Life', 'L' + (paper.life ?? 1) + ' · ' + (paper.busts ?? 0) + ' busts')
+  ) : bkMini('—', 'No paper bot');
+  $('benchNote').textContent = paper.bankroll_note || '';
+
+  $('activityLog').innerHTML = (d.activity || []).map(l =>
+    `<div><span class="t">${new Date(l.ts * 1000).toLocaleTimeString()}</span>` +
+    `<span class="lv ${esc(l.level)}">${esc(l.level)}</span>` +
+    `<span>${esc(l.message)}</span>` +
+    (l.detail ? `<span class="d">${esc(JSON.stringify(l.detail)).slice(0, 140)}</span>` : '') + '</div>'
+  ).join('') || '<div>— no activity yet</div>';
+}
+
+async function refreshBankroll() {
+  try {
+    renderBankroll(await api('/api/autopilot/bankroll'));
+  } catch (e) {
+    const msg = String(e.message || e);
+    $('metaChips').innerHTML = `<span class="bk-chip err">${esc(msg)}</span>`;
+  }
+}
+
+function startBankroll() {
+  if (bkStarted) {
+    if (bkData) drawEquity(bkData.equity_curve);
+    return;
+  }
+  bkStarted = true;
+  document.querySelectorAll('#heatMode button').forEach(btn => {
+    btn.onclick = () => {
+      heatMode = btn.dataset.mode;
+      document.querySelectorAll('#heatMode button').forEach(b => b.classList.toggle('on', b === btn));
+      renderHeatmap();
+    };
+  });
+  window.addEventListener('resize', () => { if (bkData && activeTab === 'bankroll') drawEquity(bkData.equity_curve); });
+  refreshBankroll();
+  bkInterval = setInterval(refreshBankroll, 8000);
+}
+
 /* ── boot ─────────────────────────────────────────────────────── */
 (async () => {
   const me = await fetch('/api/auth/me', { credentials: 'same-origin' }).then(r => r.json()).catch(() => ({}));
-  if (!me.user) { location.replace('/account?signin=1&next=/autopilot'); return; }
+  if (!me.user) {
+    const next = encodeURIComponent(location.pathname + location.search || '/autopilot');
+    location.replace('/account?signin=1&next=' + next);
+    return;
+  }
 
   const d = await api('/api/autopilot/strategies').catch(() => ({ strategies: [] }));
   strategies = d.strategies || [];
@@ -857,6 +1392,9 @@ document.querySelectorAll('[data-disconnect]').forEach(btn => {
   setInterval(refreshLogs, 8000);
   setInterval(refreshTrades, 10000);
   setInterval(refreshBalances, 30000);
+
+  setTab(tabFromUrl(), false);
+  window.addEventListener('popstate', () => setTab(tabFromUrl(), false));
 })();
 </script>
 <script src="/header.js?v=2"></script>

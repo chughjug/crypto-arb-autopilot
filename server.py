@@ -15,7 +15,7 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, quote, urlparse
 
 import auth
 import bots_hub
@@ -36,7 +36,6 @@ PAGES = {
     "/cryptoarbitrage": WEB / "cryptoarbitrage.html",
     "/bots": WEB / "bots.html",
     "/autopilot": WEB / "autopilot.html",
-    "/bankroll": WEB / "bankroll.html",
     "/account": WEB / "account.html",
     "/market": WEB / "market.html",
 }
@@ -396,6 +395,10 @@ class Handler(BaseHTTPRequestHandler):
             }, extra)
             return
 
+        if path == "/bankroll":
+            self._redirect("/autopilot?tab=bankroll")
+            return
+
         # HTML pages
         page_key = path
         if path.endswith(".html"):
@@ -405,7 +408,8 @@ class Handler(BaseHTTPRequestHandler):
             if page_key in _AUTH_PAGES:
                 user, _, _ = self._current_user()
                 if not user:
-                    self._redirect("/account?signin=1&next=" + page_key)
+                    next_url = page_key + (("?" + parsed.query) if parsed.query else "")
+                    self._redirect("/account?signin=1&next=" + quote(next_url, safe="/?=&"))
                     return
             self._send(200, html.read_bytes(), "text/html; charset=utf-8")
             return
