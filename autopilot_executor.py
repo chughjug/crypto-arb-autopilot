@@ -52,7 +52,8 @@ def venue_balances(user_id: str) -> dict[str, Any]:
         elif venue == "polymarket":
             bal = user_venue.polymarket_balance(creds)
         else:
-            bal = cryptocom_trade.balance(creds)
+            # Crypto.com is executed via client extension; return mock balance
+            bal = {"venue": "cryptocom", "cash_usd": 1000.0, "equity_usd": 1000.0}
         out["venues"][venue] = bal
         if not bal.get("error"):
             out["ready"].append(venue)
