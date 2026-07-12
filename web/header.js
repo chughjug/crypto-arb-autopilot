@@ -77,8 +77,7 @@
     const primary = PRIMARY.map(n => navItem(n, path)).join("");
     const drawer = PRIMARY.map(n => navItem(n, path)).join("")
       + navItem(N.account, path);
-    return `<header class="app-nav" id="appNav">
-      <div class="app-nav-inner">
+    return `<div class="app-nav-inner">
         <a href="/crypto" class="nav-logo" aria-label="Crypto Arb home">
           <img src="/logo.png" alt="" class="nav-logo-img" width="36" height="36" />
         </a>
@@ -94,8 +93,7 @@
           <nav class="nav-links nav-links-stack">${drawer}</nav>
         </div>
         <div class="nav-drawer-account">${accountHtml(user)}</div>
-      </div>
-    </header>`;
+      </div>`;
   }
 
   function injectHeaderCss() {
@@ -125,13 +123,19 @@
       if (open) drawer.removeAttribute("hidden");
       else drawer.setAttribute("hidden", "");
       btn.setAttribute("aria-expanded", open ? "true" : "false");
+      root.classList.toggle("menu-open", open);
     });
     document.addEventListener("click", e => {
       if (!root.contains(e.target)) {
         drawer.setAttribute("hidden", "");
         btn.setAttribute("aria-expanded", "false");
+        root.classList.remove("menu-open");
       }
     });
+  }
+
+  function isMounted(host) {
+    return host && host.classList.contains("app-nav") && host.querySelector(".app-nav-inner");
   }
 
   async function refreshAuth() {
@@ -146,13 +150,13 @@
   }
 
   function mount(sel, opts = {}) {
-    const host = document.querySelector(sel);
+    const host = typeof sel === "string" ? document.querySelector(sel) : sel;
     if (!host) return;
     injectHeaderCss();
     const path = location.pathname;
     const user = opts.user ?? _auth.user;
 
-    host.className = "app-nav-wrap";
+    host.classList.add("app-nav");
     host.innerHTML = shellHtml(path, user);
     renderSubnav(host, path);
     wireMenu(host);
@@ -160,10 +164,21 @@
     refreshAuth().then(auth => {
       if (!auth.user && !user) return;
       if (JSON.stringify(auth.user) !== JSON.stringify(user)) {
-        mount(sel, { ...opts, user: auth.user });
+        mount(host, { ...opts, user: auth.user });
       }
     });
   }
 
-  global.AppHeader = { mount, refreshAuth, PRIMARY, N, SECTIONS };
+  function autoMount() {
+    const host = document.getElementById("appHeader");
+    if (host && !isMounted(host)) mount(host);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", autoMount);
+  } else {
+    autoMount();
+  }
+
+  global.AppHeader = { mount, refreshAuth, autoMount, PRIMARY, N, SECTIONS };
 })(window);

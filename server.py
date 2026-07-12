@@ -40,7 +40,7 @@ PAGES = {
 }
 
 STATIC_JS = {
-    "/header.js", "/live.js", "/viewmode.js", "/market-detail.js",
+    "/header.js", "/account.js", "/live.js", "/viewmode.js", "/market-detail.js",
     "/bot-ledger.js", "/theme.css", "/bot-panel.css", "/manifest.json",
 }
 STATIC_IMG = {
